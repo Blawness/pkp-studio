@@ -1,0 +1,73 @@
+
+# Defines the data model for a Certificate.
+# The @table directive maps this GQL type to a database table.
+# 'kode' is specified as the primary key for the table.
+type Certificate @table(key: "kode") {
+  id: String! @unique # Often mapped from the primary key for GQL convenience
+  kode: String! @unique # The business primary key
+  nama_pemegang: String!
+  surat_hak: String!
+  no_sertifikat: String!
+  lokasi_tanah: String!
+  luas_m2: Int!
+  tgl_terbit: Timestamp!
+  surat_ukur: String!
+  nib: String!
+  pendaftaran_pertama: Timestamp!
+  createdAt: Timestamp @default(expression: "CURRENT_TIMESTAMP")
+  updatedAt: Timestamp @updatedAt
+}
+
+# Input type for creating a new Certificate.
+# Used in the createCertificate mutation.
+input CertificateCreateInput {
+  kode: String!
+  nama_pemegang: String!
+  surat_hak: String!
+  no_sertifikat: String!
+  lokasi_tanah: String!
+  luas_m2: Int!
+  tgl_terbit: Timestamp!
+  surat_ukur: String!
+  nib: String!
+  pendaftaran_pertama: Timestamp!
+}
+
+# Input type for updating an existing Certificate.
+# 'kode' is used to identify the certificate to update.
+# All other fields are optional.
+input CertificateUpdateInput {
+  kode: String!
+  nama_pemegang: String
+  surat_hak: String
+  no_sertifikat: String
+  lokasi_tanah: String
+  luas_m2: Int
+  tgl_terbit: Timestamp
+  surat_ukur: String
+  nib: String
+  pendaftaran_pertama: Timestamp
+}
+
+# Defines the available queries.
+# Each query is linked to a resolver function in the backend connector.
+type Query {
+  # Fetches a list of all certificates.
+  listCertificates: [Certificate!]! @resolver(name: "ts:../connector/certificates.listCertificates")
+
+  # Fetches a single certificate by its 'kode'.
+  getCertificateByKode(kode: String!): Certificate @resolver(name: "ts:../connector/certificates.getCertificateByKode")
+}
+
+# Defines the available mutations for creating, updating, and deleting certificates.
+# Each mutation is linked to a resolver function.
+type Mutation {
+  # Creates a new certificate.
+  createCertificate(input: CertificateCreateInput!): Certificate! @resolver(name: "ts:../connector/certificates.createCertificate")
+
+  # Updates an existing certificate identified by 'kode'.
+  updateCertificate(input: CertificateUpdateInput!): Certificate @resolver(name: "ts:../connector/certificates.updateCertificate")
+
+  # Deletes a certificate by its 'kode'. Returns the 'kode' of the deleted certificate.
+  deleteCertificateByKode(kode: String!): String @resolver(name: "ts:../connector/certificates.deleteCertificateByKode")
+}

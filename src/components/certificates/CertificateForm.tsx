@@ -1,3 +1,4 @@
+
 "use client";
 
 import React from 'react';
@@ -10,10 +11,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import type { Certificate } from '@/lib/types';
+import type { CertificateCreateInput, CertificateUpdateInput } from '@firebasegen/default-connector'; // Use generated types
 import { cn } from '@/lib/utils';
 import { CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
+import type { DisplayCertificate } from '@/app/(app)/certificates/page'; // Import DisplayCertificate
 
 const certificateSchema = z.object({
   kode: z.string().min(1, "Kode is required"),
@@ -28,28 +30,53 @@ const certificateSchema = z.object({
   pendaftaran_pertama: z.date({ required_error: "Pendaftaran Pertama is required" }),
 });
 
+// This form data type is for internal form state
 type CertificateFormData = z.infer<typeof certificateSchema>;
 
 interface CertificateFormProps {
-  onSubmit: (data: CertificateFormData) => void;
-  initialData?: Partial<Certificate>;
+  onSubmit: (data: CertificateCreateInput | Omit<CertificateUpdateInput, 'kode'>) => void;
+  initialData?: DisplayCertificate; // Use DisplayCertificate for initialData consistency
   isSubmitting?: boolean;
+  onCancel: () => void; // Add onCancel prop
 }
 
-export function CertificateForm({ onSubmit, initialData, isSubmitting }: CertificateFormProps) {
+export function CertificateForm({ onSubmit, initialData, isSubmitting, onCancel }: CertificateFormProps) {
   const form = useForm<CertificateFormData>({
     resolver: zodResolver(certificateSchema),
     defaultValues: {
-      ...initialData,
+      kode: initialData?.kode || '',
+      nama_pemegang: initialData?.nama_pemegang || '',
+      surat_hak: initialData?.surat_hak || '',
+      no_sertifikat: initialData?.no_sertifikat || '',
+      lokasi_tanah: initialData?.lokasi_tanah || '',
       luas_m2: initialData?.luas_m2 || 0,
+      // Ensure dates are Date objects for the form, converting from string/Timestamp if necessary
       tgl_terbit: initialData?.tgl_terbit ? new Date(initialData.tgl_terbit) : undefined,
       pendaftaran_pertama: initialData?.pendaftaran_pertama ? new Date(initialData.pendaftaran_pertama) : undefined,
+      surat_ukur: initialData?.surat_ukur || '',
+      nib: initialData?.nib || '',
     },
   });
 
+  // Disable 'kode' field when editing
+  React.useEffect(() => {
+    if (initialData?.kode) {
+      form.setValue('kode', initialData.kode);
+    }
+  }, [initialData, form]);
+
+  const handleSubmit = (data: CertificateFormData) => {
+    // The 'kode' is part of `data` here.
+    // If editing, `onSubmit` in page.tsx expects `CertificateUpdateInput` (which includes kode for identification).
+    // If creating, `onSubmit` expects `CertificateCreateInput`.
+    // The type for `onSubmit` in `CertificateFormProps` handles this.
+    onSubmit(data);
+  };
+
+
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
           <FormField
             control={form.control}
@@ -58,7 +85,7 @@ export function CertificateForm({ onSubmit, initialData, isSubmitting }: Certifi
               <FormItem>
                 <FormLabel>Kode</FormLabel>
                 <FormControl>
-                  <Input placeholder="e.g., K001" {...field} />
+                  <Input placeholder="e.g., K001" {...field} disabled={!!initialData} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -239,9 +266,10 @@ export function CertificateForm({ onSubmit, initialData, isSubmitting }: Certifi
           />
         </div>
         <div className="flex flex-col sm:flex-row sm:justify-end gap-2 pt-4">
-            <Button type="button" variant="outline" onClick={() => form.reset()} className="w-full sm:w-auto">Cancel</Button>
+            {/* Use the onCancel prop for the cancel button */}
+            <Button type="button" variant="outline" onClick={onCancel} className="w-full sm:w-auto">Cancel</Button>
             <Button type="submit" disabled={isSubmitting} className="w-full sm:w-auto">
-              {isSubmitting ? 'Submitting...' : (initialData?.id ? 'Update Certificate' : 'Add Certificate')}
+              {isSubmitting ? 'Submitting...' : (initialData?.kode ? 'Update Certificate' : 'Add Certificate')}
             </Button>
         </div>
       </form>

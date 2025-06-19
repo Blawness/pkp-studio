@@ -1,14 +1,14 @@
 
 "use client";
 
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { CertificateTable } from '@/components/certificates/CertificateTable';
 import { CertificateForm } from '@/components/certificates/CertificateForm';
-import type { Certificate } from '@/lib/types';
-import { mockCertificates } from '@/lib/mockData';
+// Use generated types from Data Connect SDK
+import type { Certificate as GeneratedCertificate, CertificateCreateInput, CertificateUpdateInput } from '@firebasegen/default-connector';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, PlusCircle } from 'lucide-react';
+import { Search, PlusCircle, RefreshCw } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -16,27 +16,54 @@ import {
   DialogTitle,
   DialogDescription,
   DialogTrigger,
-  DialogClose,
+  DialogClose, // Import DialogClose
 } from '@/components/ui/dialog';
 import { useToast } from "@/hooks/use-toast";
+import { 
+  useListCertificatesQuery, 
+  useCreateCertificateMutation, 
+  useUpdateCertificateMutation, 
+  useDeleteCertificateMutation 
+} from '@firebasegen/default-connector/react'; // Adjusted import path
+
+// Adapt GeneratedCertificate to local Certificate type if needed, or use GeneratedCertificate directly
+// For simplicity, we'll adapt the data for the table. The form will use stricter types.
+export interface DisplayCertificate extends Omit<GeneratedCertificate, 'tgl_terbit' | 'pendaftaran_pertama' | 'createdAt' | 'updatedAt'> {
+  id: string; // Ensure id is string, DataConnect uses 'kode' as id for Certificate
+  tgl_terbit: Date;
+  pendaftaran_pertama: Date;
+  createdAt?: Date;
+  updatedAt?: Date;
+  actions?: boolean;
+}
+
 
 export default function CertificatesPage() {
   const { toast } = useToast();
-  const [certificates, setCertificates] = useState<Certificate[] | null>(null);
+  
+  const { data: certificatesData, isLoading, error, refetch } = useListCertificatesQuery({});
+  
+  const createCertificateMutation = useCreateCertificateMutation();
+  const updateCertificateMutation = useUpdateCertificateMutation();
+  const deleteCertificateMutation = useDeleteCertificateMutation();
+
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingCertificate, setEditingCertificate] = useState<Certificate | undefined>(undefined);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editingCertificate, setEditingCertificate] = useState<DisplayCertificate | undefined>(undefined);
 
-  useEffect(() => {
-    // Load mock certificates on the client side to avoid hydration mismatch
-    setCertificates(mockCertificates);
-  }, []);
+  const certificates = useMemo(() => {
+    if (!certificatesData?.listCertificates) return [];
+    return certificatesData.listCertificates.map(cert => ({
+      ...cert,
+      id: cert.kode, // Use kode as id for display consistency if needed
+      tgl_terbit: new Date(cert.tgl_terbit),
+      pendaftaran_pertama: new Date(cert.pendaftaran_pertama),
+      createdAt: cert.createdAt ? new Date(cert.createdAt) : undefined,
+      updatedAt: cert.updatedAt ? new Date(cert.updatedAt) : undefined,
+    }));
+  }, [certificatesData]);
 
   const filteredCertificates = useMemo(() => {
-    if (!certificates) {
-      return []; // Return empty array if certificates are not yet loaded
-    }
     return certificates.filter(cert =>
       Object.values(cert).some(value =>
         String(value).toLowerCase().includes(searchTerm.toLowerCase())
@@ -49,41 +76,56 @@ export default function CertificatesPage() {
     setIsModalOpen(true);
   }, []);
 
-  const handleEditCertificate = useCallback((certificate: Certificate) => {
+  const handleEditCertificate = useCallback((certificate: DisplayCertificate) => {
     setEditingCertificate(certificate);
     setIsModalOpen(true);
   }, []);
 
-  const handleDeleteCertificate = useCallback((certificateId: string) => {
-    setCertificates(prev => prev ? prev.filter(cert => cert.id !== certificateId) : null);
-    toast({ variant: "destructive", title: "Certificate Deleted", description: `Certificate ID ${certificateId} has been removed.` });
-  }, [toast, setCertificates]);
+  const handleDeleteCertificate = useCallback(async (certificateKode: string) => {
+    try {
+      await deleteCertificateMutation.mutateAsync({ kode: certificateKode });
+      toast({ variant: "destructive", title: "Certificate Deleted", description: `Certificate with kode ${certificateKode} has been removed.` });
+      refetch(); // Refetch list after deletion
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Deletion Failed", description: e.message || "Could not delete certificate." });
+    }
+  }, [deleteCertificateMutation, toast, refetch]);
 
-  const handleFormSubmit = useCallback(async (data: any) => {
-    setIsSubmitting(true);
-    await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
-
-    setCertificates(prevCertificates => {
-      const currentCertificates = prevCertificates || [];
+  const handleFormSubmit = useCallback(async (data: CertificateCreateInput | Omit<CertificateUpdateInput, 'id'>) => { // Omit id from update input type here as kode is used
+    try {
       if (editingCertificate) {
-        toast({ title: "Certificate Updated", description: `Certificate ${data.kode} has been updated.` });
-        return currentCertificates.map(cert => cert.id === editingCertificate.id ? { ...cert, ...data, id: cert.id } : cert);
+        const updateData: CertificateUpdateInput = {
+          kode: editingCertificate.kode, // Use kode from editingCertificate
+          ...(data as Omit<CertificateUpdateInput, 'kode'>), // Cast data, ensuring kode isn't duplicated from data
+        };
+        await updateCertificateMutation.mutateAsync(updateData);
+        toast({ title: "Certificate Updated", description: `Certificate ${updateData.kode} has been updated.` });
       } else {
-        const newCertificate: Certificate = { ...data, id: `cert-${Date.now()}` };
-        toast({ title: "Certificate Added", description: `Certificate ${data.kode} has been added.` });
-        return [newCertificate, ...currentCertificates];
+        await createCertificateMutation.mutateAsync(data as CertificateCreateInput);
+        toast({ title: "Certificate Added", description: `Certificate ${(data as CertificateCreateInput).kode} has been added.` });
       }
-    });
-
-    setIsSubmitting(false);
-    setIsModalOpen(false);
-    setEditingCertificate(undefined);
-  }, [editingCertificate, toast, setCertificates, setIsSubmitting, setIsModalOpen, setEditingCertificate]);
+      refetch(); // Refetch list after creation/update
+      setIsModalOpen(false);
+      setEditingCertificate(undefined);
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Submission Failed", description: e.message || "Could not save certificate." });
+    }
+  }, [editingCertificate, createCertificateMutation, updateCertificateMutation, toast, refetch]);
   
-  if (certificates === null) {
+  if (isLoading) {
     return (
       <div className="flex flex-col flex-1 space-y-8 items-center justify-center">
+        <RefreshCw className="mr-2 h-8 w-8 animate-spin text-primary" />
         <p>Loading certificates...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+     return (
+      <div className="flex flex-col flex-1 space-y-8 items-center justify-center text-destructive">
+        <p>Error loading certificates: {error.message}</p>
+        <Button onClick={() => refetch()}>Try Again</Button>
       </div>
     );
   }
@@ -94,7 +136,7 @@ export default function CertificatesPage() {
         <h1 className="text-3xl font-headline font-semibold">Certificate Management</h1>
         <Dialog open={isModalOpen} onOpenChange={(open) => { setIsModalOpen(open); if (!open) setEditingCertificate(undefined); }}>
           <DialogTrigger asChild>
-            <Button onClick={handleAddCertificate}>
+            <Button onClick={handleAddCertificate} className="w-full sm:w-auto">
               <PlusCircle className="mr-2 h-4 w-4" /> Add Certificate
             </Button>
           </DialogTrigger>
@@ -110,9 +152,9 @@ export default function CertificatesPage() {
             <CertificateForm
               onSubmit={handleFormSubmit}
               initialData={editingCertificate}
-              isSubmitting={isSubmitting}
+              isSubmitting={createCertificateMutation.isPending || updateCertificateMutation.isPending}
+              onCancel={() => setIsModalOpen(false)} // Pass cancel handler
             />
-             {/* Add DialogClose to the form's cancel button or handle close explicitly */}
           </DialogContent>
         </Dialog>
       </div>
@@ -129,8 +171,8 @@ export default function CertificatesPage() {
       </div>
 
       <CertificateTable
-        certificates={filteredCertificates}
-        onEdit={handleEditCertificate}
+        certificates={filteredCertificates as any[]} // Cast to any[] if DisplayCertificate causes issues with table props
+        onEdit={handleEditCertificate as any}
         onDelete={handleDeleteCertificate}
       />
     </div>

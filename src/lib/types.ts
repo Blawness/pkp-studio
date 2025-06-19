@@ -1,16 +1,23 @@
+
+// The Certificate type definition can be removed or adapted if
+// you primarily use the generated types from @firebasegen/default-connector.
+// For now, it's kept for reference but might not be directly used by pages
+// that consume Data Connect generated types.
 export interface Certificate {
-  id: string;
+  id: string; // In DataConnect schema, 'kode' is used as 'id'
   kode: string;
   nama_pemegang: string;
   surat_hak: string;
   no_sertifikat: string;
   lokasi_tanah: string;
   luas_m2: number;
-  tgl_terbit: Date;
+  tgl_terbit: Date; // Will be string or Timestamp from DataConnect, convert to Date in frontend
   surat_ukur: string;
   nib: string;
-  pendaftaran_pertama: Date;
+  pendaftaran_pertama: Date; // Will be string or Timestamp from DataConnect
   actions?: boolean; // Optional: to indicate if actions column should be rendered
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 export interface User {

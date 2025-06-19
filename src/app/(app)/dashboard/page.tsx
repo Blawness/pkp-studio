@@ -1,94 +1,108 @@
 
 "use client"; 
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { CertificateTable } from '@/components/certificates/CertificateTable';
-import type { Certificate, StatCardData } from '@/lib/types';
-import { mockCertificates, mockUsers, mockActivityLogs } from '@/lib/mockData';
-import { BarChart3, UsersRound, ListChecks } from 'lucide-react';
+import type { Certificate as DisplayCertificate, StatCardData } from '@/lib/types'; // Using local Certificate for display
+import { mockUsers, mockActivityLogs } from '@/lib/mockData'; // mockCertificates removed
+import { BarChart3, UsersRound, ListChecks, RefreshCw } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
-
+import { useListCertificatesQuery } from '@firebasegen/default-connector/react'; // Import Data Connect hook
+import type { Certificate as GeneratedCertificate } from '@firebasegen/default-connector';
 
 export default function DashboardPage() {
   const { toast } = useToast();
-  const [certificates, setCertificates] = useState<Certificate[] | null>(null);
-  const [recentCertificates, setRecentCertificates] = useState<Certificate[]>([]);
+  
+  const { data: certificatesData, isLoading: isLoadingCertificates, error: certificatesError, refetch } = useListCertificatesQuery({});
 
-  // These counts are based on mockData arrays whose lengths should be stable
+  const [recentCertificates, setRecentCertificates] = useState<DisplayCertificate[]>([]);
+
+  // These counts are based on mockData arrays whose lengths should be stable for now
   const usersCount = mockUsers.length;
   const logsCount = mockActivityLogs.length;
 
-  useEffect(() => {
-    // Set certificates on the client after hydration to avoid mismatch
-    const loadedCertificates = mockCertificates;
-    setCertificates(loadedCertificates);
-    setRecentCertificates(
-      loadedCertificates.slice(0, 5).map(cert => ({ ...cert, actions: false }))
-    );
-  }, []); // Empty dependency array ensures this runs once on mount client-side
+  const certificatesCount = useMemo(() => {
+    return certificatesData?.listCertificates?.length ?? 0;
+  }, [certificatesData]);
 
-  // Recalculate statCardsData when certificates state changes
+  useEffect(() => {
+    if (certificatesData?.listCertificates) {
+      const loadedCerts = certificatesData.listCertificates.map((cert: GeneratedCertificate) => ({
+        ...cert,
+        id: cert.kode, // Assuming 'kode' is the unique identifier matching 'id'
+        tgl_terbit: new Date(cert.tgl_terbit),
+        pendaftaran_pertama: new Date(cert.pendaftaran_pertama),
+        createdAt: cert.createdAt ? new Date(cert.createdAt) : undefined,
+        updatedAt: cert.updatedAt ? new Date(cert.updatedAt) : undefined,
+        actions: false, // Disable actions for dashboard view
+      }));
+      setRecentCertificates(loadedCerts.slice(0, 5));
+    }
+  }, [certificatesData]);
+
   const statCardsData: StatCardData[] = [
-    { title: 'Total Certificates', value: certificates ? certificates.length : 0, icon: BarChart3, description: 'Number of active certificates' },
+    { title: 'Total Certificates', value: isLoadingCertificates ? 'Loading...' : certificatesCount, icon: BarChart3, description: 'Number of active certificates' },
     { title: 'Total Users', value: usersCount, icon: UsersRound, description: 'Registered users in the system' },
     { title: 'Total Logs', value: logsCount, icon: ListChecks, description: 'Recorded activities' },
   ];
 
-  const handleEditCertificate = (certificate: Certificate) => {
+  const handleEditCertificate = (certificate: DisplayCertificate) => {
+    // This is a mock action for the dashboard. Actual editing happens on CertificatesPage.
     toast({ title: "Edit Action (Mock)", description: `Editing certificate: ${certificate.kode}` });
   };
 
   const handleDeleteCertificate = (certificateId: string) => {
+    // This is a mock action for the dashboard.
      toast({ variant: "destructive", title: "Delete Action (Mock)", description: `Deleting certificate ID: ${certificateId}` });
   };
 
-  if (certificates === null) {
-    // Render a loading state or a simplified version until certificates are loaded client-side
+  const renderContent = () => {
+    if (isLoadingCertificates) {
+      return (
+        <div className="flex flex-col flex-1 space-y-8 items-center justify-center">
+          <RefreshCw className="mr-2 h-8 w-8 animate-spin text-primary" />
+          <p>Loading dashboard data...</p>
+        </div>
+      );
+    }
+    
+    if (certificatesError) {
+      return (
+        <div className="flex flex-col flex-1 space-y-8 items-center justify-center text-destructive">
+          <p>Error loading certificates: {certificatesError.message}</p>
+          <Button onClick={() => refetch()}>Try Again</Button>
+        </div>
+      );
+    }
+
     return (
-      <div className="space-y-8">
-        <h1 className="text-3xl font-headline font-semibold">Dashboard</h1>
+      <>
         <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {statCardsData.map((stat) => (
-             <StatCard 
-                key={stat.title} 
-                data={{
-                  ...stat, 
-                  value: stat.title === 'Total Certificates' && stat.value === 0 ? 'Loading...' : stat.value 
-                }} 
-            />
+            <StatCard key={stat.title} data={stat} />
           ))}
         </section>
+
         <section>
           <h2 className="text-2xl font-headline font-semibold mb-4">Recent Certificates</h2>
-          <div className="rounded-xl border shadow-xs p-4 text-center">
-            <p className="text-muted-foreground">Loading certificates...</p>
-          </div>
+          <CertificateTable
+            certificates={recentCertificates}
+            onEdit={handleEditCertificate} 
+            onDelete={handleDeleteCertificate}
+            showPagination={false} 
+            caption="Last 5 certificates added"
+          />
         </section>
-      </div>
+      </>
     );
-  }
+  };
+
 
   return (
     <div className="space-y-8">
       <h1 className="text-3xl font-headline font-semibold">Dashboard</h1>
-      
-      <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {statCardsData.map((stat) => (
-          <StatCard key={stat.title} data={stat} />
-        ))}
-      </section>
-
-      <section>
-        <h2 className="text-2xl font-headline font-semibold mb-4">Recent Certificates</h2>
-        <CertificateTable
-          certificates={recentCertificates} // Use the state variable
-          onEdit={handleEditCertificate} 
-          onDelete={handleDeleteCertificate}
-          showPagination={false} 
-          caption="Last 5 certificates added"
-        />
-      </section>
+      {renderContent()}
     </div>
   );
 }
