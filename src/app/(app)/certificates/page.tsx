@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { CertificateTable } from '@/components/certificates/CertificateTable';
 import { CertificateForm } from '@/components/certificates/CertificateForm';
 import type { Certificate } from '@/lib/types';
@@ -16,7 +16,7 @@ import {
   DialogTitle,
   DialogDescription,
   DialogTrigger,
-  DialogClose, // Import DialogClose
+  DialogClose,
 } from '@/components/ui/dialog';
 import { useToast } from "@/hooks/use-toast";
 
@@ -36,33 +36,29 @@ export default function CertificatesPage() {
     );
   }, [certificates, searchTerm]);
 
-  const handleAddCertificate = () => {
+  const handleAddCertificate = useCallback(() => {
     setEditingCertificate(undefined);
     setIsModalOpen(true);
-  };
+  }, [setEditingCertificate, setIsModalOpen]);
 
-  const handleEditCertificate = (certificate: Certificate) => {
+  const handleEditCertificate = useCallback((certificate: Certificate) => {
     setEditingCertificate(certificate);
     setIsModalOpen(true);
-  };
+  }, [setEditingCertificate, setIsModalOpen]);
 
-  const handleDeleteCertificate = (certificateId: string) => {
-    // Mock deletion
+  const handleDeleteCertificate = useCallback((certificateId: string) => {
     setCertificates(prev => prev.filter(cert => cert.id !== certificateId));
     toast({ variant: "destructive", title: "Certificate Deleted", description: `Certificate ID ${certificateId} has been removed.` });
-  };
+  }, [setCertificates, toast]);
 
-  const handleFormSubmit = async (data: any) => {
+  const handleFormSubmit = useCallback(async (data: any) => {
     setIsSubmitting(true);
-    // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1000));
 
     if (editingCertificate) {
-      // Mock update
       setCertificates(prev => prev.map(cert => cert.id === editingCertificate.id ? { ...cert, ...data, id: cert.id } : cert));
       toast({ title: "Certificate Updated", description: `Certificate ${data.kode} has been updated.` });
     } else {
-      // Mock add
       const newCertificate: Certificate = { ...data, id: `cert-${Date.now()}` };
       setCertificates(prev => [newCertificate, ...prev]);
       toast({ title: "Certificate Added", description: `Certificate ${data.kode} has been added.` });
@@ -70,7 +66,7 @@ export default function CertificatesPage() {
     setIsSubmitting(false);
     setIsModalOpen(false);
     setEditingCertificate(undefined);
-  };
+  }, [editingCertificate, setCertificates, toast, setIsSubmitting, setIsModalOpen, setEditingCertificate]);
 
   return (
     <div className="flex flex-col flex-1 space-y-8">
@@ -96,7 +92,6 @@ export default function CertificatesPage() {
               initialData={editingCertificate}
               isSubmitting={isSubmitting}
             />
-             {/* DialogClose can be used if needed, but form cancel/submit handles closing */}
           </DialogContent>
         </Dialog>
       </div>
