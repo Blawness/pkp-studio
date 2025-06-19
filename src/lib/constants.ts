@@ -30,4 +30,5 @@ export const NAV_ITEMS: NavItem[] = [
   },
 ];
 
-export const APP_NAME = "AuraCert";
+export const APP_NAME = "Database PKP";
+

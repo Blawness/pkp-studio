@@ -1,9 +1,10 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
+import { APP_NAME } from '@/lib/constants';
 
 export const metadata: Metadata = {
-  title: 'AuraCert',
+  title: APP_NAME,
   description: 'Certificate Management System by Firebase Studio',
 };
 
