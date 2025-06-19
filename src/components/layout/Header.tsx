@@ -16,6 +16,7 @@ import {
 import { LogOut, UserCircle, Moon, Sun } from "lucide-react";
 import { Breadcrumbs } from "@/components/shared/Breadcrumbs";
 import { APP_NAME } from "@/lib/constants";
+import { useToast } from "@/hooks/use-toast";
 
 // Mock theme toggler for now
 const ThemeToggle = () => {
@@ -46,6 +47,17 @@ const ThemeToggle = () => {
 
 
 export function Header() {
+  const { toast } = useToast();
+
+  const handleLogout = () => {
+    toast({
+      title: "Logged Out",
+      description: "You have been successfully logged out.",
+    });
+    // In a real app, you would redirect or clear session here
+    // e.g., router.push('/login');
+  };
+
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 md:px-6">
       <div className="flex items-center gap-2 md:hidden">
@@ -62,7 +74,7 @@ export function Header() {
             <Button variant="ghost" className="relative h-8 w-8 rounded-full">
               <Avatar className="h-8 w-8">
                 <AvatarImage src="https://placehold.co/40x40.png" alt="User avatar" data-ai-hint="user avatar" />
-                <AvatarFallback>DB</AvatarFallback> {/* Updated Fallback */}
+                <AvatarFallback>DB</AvatarFallback> 
               </Avatar>
             </Button>
           </DropdownMenuTrigger>
@@ -73,7 +85,7 @@ export function Header() {
               <UserCircle className="mr-2 h-4 w-4" />
               Profile
             </DropdownMenuItem>
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={handleLogout}>
               <LogOut className="mr-2 h-4 w-4" />
               Logout
             </DropdownMenuItem>

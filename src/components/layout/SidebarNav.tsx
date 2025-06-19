@@ -17,10 +17,21 @@ import {
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { LogOut, Settings } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 export function SidebarNav() {
   const pathname = usePathname();
   const { open, isMobile } = useSidebar();
+  const { toast } = useToast();
+
+  const handleLogout = () => {
+    toast({
+      title: "Logged Out",
+      description: "You have been successfully logged out.",
+    });
+    // In a real app, you would redirect or clear session here
+    // e.g., router.push('/login');
+  };
 
   return (
     <>
@@ -41,18 +52,20 @@ export function SidebarNav() {
       <SidebarContent className="p-2">
         <SidebarMenu>
           {NAV_ITEMS.map((item) => (
-            <SidebarMenuItem key={item.title}>
-              <SidebarMenuButton
-                asChild
-                isActive={pathname.startsWith(item.href)}
-                tooltip={{ children: item.title, side: "right", className: "bg-card text-card-foreground border-border shadow-md" }}
-              >
-                <Link href={item.href}>
-                  <item.icon />
-                  <span>{item.title}</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
+             item.href !== '/settings' && ( // Exclude settings from main nav if it's handled in footer
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={pathname.startsWith(item.href)}
+                    tooltip={{ children: item.title, side: "right", className: "bg-card text-card-foreground border-border shadow-md" }}
+                  >
+                    <Link href={item.href}>
+                      <item.icon />
+                      <span>{item.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )
           ))}
         </SidebarMenu>
       </SidebarContent>
@@ -72,13 +85,11 @@ export function SidebarNav() {
           </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton 
-              asChild
+              onClick={handleLogout}
               tooltip={{ children: "Logout", side: "right", className: "bg-card text-card-foreground border-border shadow-md" }}
             >
-              <Link href="#">
-                <LogOut />
-                <span>Logout</span>
-              </Link>
+              <LogOut />
+              <span>Logout</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
