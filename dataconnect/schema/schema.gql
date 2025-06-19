@@ -1,25 +1,34 @@
 
-# Defines the data model for a Certificate.
-# The @table directive maps this GQL type to a database table.
-# 'kode' is specified as the primary key for the table.
-type Certificate @table(key: "kode") {
-  id: String! @unique # Often mapped from the primary key for GQL convenience
-  kode: String! @unique # The business primary key
-  nama_pemegang: String!
-  surat_hak: String!
-  no_sertifikat: String!
-  lokasi_tanah: String!
-  luas_m2: Int!
-  tgl_terbit: Timestamp!
-  surat_ukur: String!
-  nib: String!
-  pendaftaran_pertama: Timestamp!
-  createdAt: Timestamp @default(expression: "CURRENT_TIMESTAMP")
-  updatedAt: Timestamp @updatedAt
+type Query {
+  listCertificates: [Certificate!]
+  getCertificateByKode(kode: String!): Certificate
 }
 
-# Input type for creating a new Certificate.
-# Used in the createCertificate mutation.
+type Mutation {
+  createCertificate(input: CertificateCreateInput!): Certificate!
+  updateCertificate(input: CertificateUpdateInput!): Certificate
+  deleteCertificateByKode(kode: String!): String
+}
+
+"""
+Represents a land certificate.
+"""
+type Certificate @table(name: "certificates") {
+  id: String! @unique @column(name: "id") # Use 'kode' as the primary identifier
+  kode: String! @unique @column(name: "kode")
+  nama_pemegang: String! @column(name: "nama_pemegang")
+  surat_hak: String! @column(name: "surat_hak")
+  no_sertifikat: String! @column(name: "no_sertifikat")
+  lokasi_tanah: String! @column(name: "lokasi_tanah")
+  luas_m2: Int! @column(name: "luas_m2")
+  tgl_terbit: Timestamp! @column(name: "tgl_terbit") # Changed from Date!
+  surat_ukur: String! @column(name: "surat_ukur")
+  nib: String! @column(name: "nib")
+  pendaftaran_pertama: Timestamp! @column(name: "pendaftaran_pertama") # Changed from Date!
+  createdAt: Timestamp @column(name: "created_at")
+  updatedAt: Timestamp @column(name: "updated_at")
+}
+
 input CertificateCreateInput {
   kode: String!
   nama_pemegang: String!
@@ -27,47 +36,25 @@ input CertificateCreateInput {
   no_sertifikat: String!
   lokasi_tanah: String!
   luas_m2: Int!
-  tgl_terbit: Timestamp!
+  tgl_terbit: Timestamp! # Changed from Date!
   surat_ukur: String!
   nib: String!
-  pendaftaran_pertama: Timestamp!
+  pendaftaran_pertama: Timestamp! # Changed from Date!
 }
 
-# Input type for updating an existing Certificate.
-# 'kode' is used to identify the certificate to update.
-# All other fields are optional.
 input CertificateUpdateInput {
-  kode: String!
+  kode: String! # Used to identify the certificate to update
   nama_pemegang: String
   surat_hak: String
   no_sertifikat: String
   lokasi_tanah: String
   luas_m2: Int
-  tgl_terbit: Timestamp
+  tgl_terbit: Timestamp # Changed from Date
   surat_ukur: String
   nib: String
-  pendaftaran_pertama: Timestamp
+  pendaftaran_pertama: Timestamp # Changed from Date
 }
 
-# Defines the available queries.
-# Each query is linked to a resolver function in the backend connector.
-type Query {
-  # Fetches a list of all certificates.
-  listCertificates: [Certificate!]! @resolver(name: "ts:../connector/certificates.listCertificates")
-
-  # Fetches a single certificate by its 'kode'.
-  getCertificateByKode(kode: String!): Certificate @resolver(name: "ts:../connector/certificates.getCertificateByKode")
-}
-
-# Defines the available mutations for creating, updating, and deleting certificates.
-# Each mutation is linked to a resolver function.
-type Mutation {
-  # Creates a new certificate.
-  createCertificate(input: CertificateCreateInput!): Certificate! @resolver(name: "ts:../connector/certificates.createCertificate")
-
-  # Updates an existing certificate identified by 'kode'.
-  updateCertificate(input: CertificateUpdateInput!): Certificate @resolver(name: "ts:../connector/certificates.updateCertificate")
-
-  # Deletes a certificate by its 'kode'. Returns the 'kode' of the deleted certificate.
-  deleteCertificateByKode(kode: String!): String @resolver(name: "ts:../connector/certificates.deleteCertificateByKode")
-}
+# Define custom scalars if not built-in, though Timestamp is usually built-in.
+scalar Timestamp
+# scalar Date # If Date was intended as a custom scalar, its definition would be here.
