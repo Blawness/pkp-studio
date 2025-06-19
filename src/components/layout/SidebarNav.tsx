@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -60,9 +61,10 @@ export function SidebarNav() {
           <SidebarMenuItem>
             <SidebarMenuButton 
               asChild
+              isActive={pathname.startsWith("/settings")}
               tooltip={{ children: "Settings", side: "right", className: "bg-card text-card-foreground border-border shadow-md" }}
             >
-              <Link href="#">
+              <Link href="/settings">
                 <Settings />
                 <span>Settings</span>
               </Link>

@@ -1,3 +1,4 @@
+
 import type { NavItem } from '@/lib/types';
 import { LayoutDashboard, ScrollText, Users, History, Settings } from 'lucide-react';
 
@@ -21,6 +22,11 @@ export const NAV_ITEMS: NavItem[] = [
     title: 'Activity Logs',
     href: '/logs',
     icon: History,
+  },
+  {
+    title: 'Settings',
+    href: '/settings',
+    icon: Settings,
   },
 ];
 
