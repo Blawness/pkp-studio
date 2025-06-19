@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import type { Certificate } from '@/lib/types';
 import {
   Table,
@@ -36,15 +36,16 @@ export function CertificateTable({
   const [currentPage, setCurrentPage] = useState(1);
 
   const totalPages = Math.ceil(certificates.length / itemsPerPage);
+  
   const currentCertificates = useMemo(() => {
     if (!showPagination) return certificates;
     const startIndex = (currentPage - 1) * itemsPerPage;
     return certificates.slice(startIndex, startIndex + itemsPerPage);
   }, [certificates, currentPage, itemsPerPage, showPagination]);
 
-  const handlePageChange = (page: number) => {
+  const handlePageChange = useCallback((page: number) => {
     setCurrentPage(page);
-  };
+  }, []);
 
   const tableHeaders = [
     "No", "Kode", "Nama Pemegang", "Surat Hak", "No Sertifikat", 
@@ -54,8 +55,9 @@ export function CertificateTable({
 
   return (
     <div className="rounded-xl border shadow-xs">
-      <div className="overflow-x-auto">
-        <Table className="min-w-full whitespace-nowrap">
+      {/* Removed overflow-x-auto from this div */}
+      <div>
+        <Table className="min-w-full"> {/* Removed whitespace-nowrap */}
           {caption && <caption className="p-4 text-lg font-semibold text-left">{caption}</caption>}
           <TableHeader>
             <TableRow>

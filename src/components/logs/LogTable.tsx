@@ -35,8 +35,9 @@ export function LogTable({ logs, itemsPerPage = 20 }: LogTableProps) {
 
   return (
     <div className="rounded-xl border shadow-xs">
-      <div className="overflow-x-auto">
-        <Table className="min-w-full whitespace-nowrap">
+      {/* Removed overflow-x-auto from this div */}
+      <div>
+        <Table className="min-w-full"> {/* Removed whitespace-nowrap */}
           <TableHeader>
             <TableRow>
               {tableHeaders.map((header) => (
