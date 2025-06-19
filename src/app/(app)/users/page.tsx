@@ -1,6 +1,7 @@
+
 "use client";
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { UserTable } from '@/components/users/UserTable';
 import { UserForm } from '@/components/users/UserForm';
 import type { User } from '@/lib/types';
@@ -23,11 +24,16 @@ export default function UsersPage() {
   // This is a mock for role-based access. In a real app, this would be handled by authentication.
   const isAdmin = true; // Assume current user is admin for UI purposes
 
-  const [users, setUsers] = useState<User[]>(mockUsers);
+  const [users, setUsers] = useState<User[]>([]); // Initialize with empty array
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | undefined>(undefined);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    // Load mock users on the client side to avoid hydration mismatch
+    setUsers(mockUsers);
+  }, []);
 
   const filteredUsers = useMemo(() => {
     return users.filter(user =>
@@ -64,6 +70,7 @@ export default function UsersPage() {
       toast({ title: "User Updated", description: `User ${data.name} has been updated.` });
     } else {
       // Mock add
+      // For new users, ensure createdAt is a new Date object created on the client
       const newUser: User = { ...data, id: `user-${Date.now()}`, createdAt: new Date() };
       setUsers(prev => [newUser, ...prev]);
       toast({ title: "User Added", description: `User ${data.name} has been added.` });
@@ -81,6 +88,12 @@ export default function UsersPage() {
       </div>
     );
   }
+  
+  // Optional: Add a loading state if users haven't loaded yet, though table will just show "No users found"
+  if (users.length === 0 && searchTerm === '') { // Check searchTerm to differentiate between loading and no results
+     // A simple loading indicator, or return UserTable with users=[] which shows "No users found."
+  }
+
 
   return (
     <div className="space-y-8">
@@ -88,7 +101,7 @@ export default function UsersPage() {
         <h1 className="text-3xl font-headline font-semibold">User Management</h1>
         <Dialog open={isModalOpen} onOpenChange={(open) => { setIsModalOpen(open); if (!open) setEditingUser(undefined); }}>
           <DialogTrigger asChild>
-            <Button onClick={handleAddUser}>
+            <Button onClick={handleAddUser} className="w-full sm:w-auto">
               <PlusCircle className="mr-2 h-4 w-4" /> Add User
             </Button>
           </DialogTrigger>
