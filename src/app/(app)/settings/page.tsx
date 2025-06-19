@@ -85,7 +85,7 @@ export default function SettingsPage() {
       </Card>
       
       <div className="flex justify-end">
-        <Button onClick={handleSaveChanges}>Save Changes</Button>
+        <Button onClick={handleSaveChanges} className="w-full sm:w-auto">Save Changes</Button>
       </div>
     </div>
   );

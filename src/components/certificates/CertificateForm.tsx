@@ -238,9 +238,9 @@ export function CertificateForm({ onSubmit, initialData, isSubmitting }: Certifi
             )}
           />
         </div>
-        <div className="flex justify-end space-x-2 pt-4">
-            <Button type="button" variant="outline" onClick={() => form.reset()}>Cancel</Button> {/* Assuming cancel closes modal, handled by Dialog.Close */}
-            <Button type="submit" disabled={isSubmitting}>
+        <div className="flex flex-col sm:flex-row sm:justify-end gap-2 pt-4">
+            <Button type="button" variant="outline" onClick={() => form.reset()} className="w-full sm:w-auto">Cancel</Button>
+            <Button type="submit" disabled={isSubmitting} className="w-full sm:w-auto">
               {isSubmitting ? 'Submitting...' : (initialData?.id ? 'Update Certificate' : 'Add Certificate')}
             </Button>
         </div>

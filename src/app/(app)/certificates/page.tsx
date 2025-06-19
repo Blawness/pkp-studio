@@ -57,7 +57,7 @@ export default function CertificatesPage() {
   const handleDeleteCertificate = useCallback((certificateId: string) => {
     setCertificates(prev => prev ? prev.filter(cert => cert.id !== certificateId) : null);
     toast({ variant: "destructive", title: "Certificate Deleted", description: `Certificate ID ${certificateId} has been removed.` });
-  }, [toast]);
+  }, [toast, setCertificates]);
 
   const handleFormSubmit = useCallback(async (data: any) => {
     setIsSubmitting(true);
@@ -78,7 +78,7 @@ export default function CertificatesPage() {
     setIsSubmitting(false);
     setIsModalOpen(false);
     setEditingCertificate(undefined);
-  }, [editingCertificate, toast]);
+  }, [editingCertificate, toast, setCertificates, setIsSubmitting, setIsModalOpen, setEditingCertificate]);
   
   if (certificates === null) {
     return (
