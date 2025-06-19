@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useMemo } from 'react';
@@ -41,9 +42,8 @@ export function UserTable({ users, onEdit, onDelete, itemsPerPage = 10 }: UserTa
 
   return (
     <div className="rounded-xl border shadow-xs">
-      {/* Removed overflow-x-auto from this div */}
       <div>
-        <Table className="min-w-full"> {/* Removed whitespace-nowrap */}
+        <Table className="min-w-full">{/* Ensure no whitespace between direct children */}
           <TableHeader>
             <TableRow>
                {tableHeaders.map((header) => (
@@ -52,8 +52,7 @@ export function UserTable({ users, onEdit, onDelete, itemsPerPage = 10 }: UserTa
                 </TableHead>
               ))}
             </TableRow>
-          </TableHeader>
-          <TableBody>
+          </TableHeader><TableBody>
             {currentUsers.map((user, index) => (
               <TableRow key={user.id}>
                 <TableCell className="px-4 py-2 text-center sm:text-left">{(currentPage - 1) * itemsPerPage + index + 1}</TableCell>

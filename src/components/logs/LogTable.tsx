@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useMemo } from 'react';
@@ -35,9 +36,8 @@ export function LogTable({ logs, itemsPerPage = 20 }: LogTableProps) {
 
   return (
     <div className="rounded-xl border shadow-xs">
-      {/* Removed overflow-x-auto from this div */}
       <div>
-        <Table className="min-w-full"> {/* Removed whitespace-nowrap */}
+        <Table className="min-w-full">{/* Ensure no whitespace between direct children */}
           <TableHeader>
             <TableRow>
               {tableHeaders.map((header) => (
@@ -46,8 +46,7 @@ export function LogTable({ logs, itemsPerPage = 20 }: LogTableProps) {
                 </TableHead>
               ))}
             </TableRow>
-          </TableHeader>
-          <TableBody>
+          </TableHeader><TableBody>
             {currentLogs.map((log, index) => (
               <TableRow key={log.id}>
                 <TableCell className="px-4 py-2 text-center sm:text-left">{(currentPage - 1) * itemsPerPage + index + 1}</TableCell>

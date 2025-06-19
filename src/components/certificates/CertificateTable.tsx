@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useMemo, useCallback } from 'react';
@@ -55,11 +56,9 @@ export function CertificateTable({
 
   return (
     <div className="rounded-xl border shadow-xs">
-      {/* Removed overflow-x-auto from this div */}
       <div>
-        <Table className="min-w-full"> {/* Removed whitespace-nowrap */}
-          {caption && <caption className="p-4 text-lg font-semibold text-left">{caption}</caption>}
-          <TableHeader>
+        <Table className="min-w-full">{/* Ensure no whitespace before/between direct children */}
+          {caption && <caption className="p-4 text-lg font-semibold text-left">{caption}</caption>}<TableHeader>
             <TableRow>
               {tableHeaders.map((header) => (
                 <TableHead key={header} className="px-4 py-3 text-xs sm:text-sm">
@@ -67,8 +66,7 @@ export function CertificateTable({
                 </TableHead>
               ))}
             </TableRow>
-          </TableHeader>
-          <TableBody>
+          </TableHeader><TableBody>
             {currentCertificates.map((cert, index) => (
               <TableRow key={cert.id}>
                 <TableCell className="px-4 py-2 text-center sm:text-left">{(currentPage - 1) * itemsPerPage + index + 1}</TableCell>
