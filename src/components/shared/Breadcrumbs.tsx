@@ -1,3 +1,4 @@
+
 "use client";
 
 import React from 'react';
@@ -18,11 +19,19 @@ export function Breadcrumbs() {
       currentPath += `/${segment}`;
       const navItem = NAV_ITEMS.find(item => item.href === currentPath);
       if (navItem) {
-        breadcrumbs.push({ label: navItem.title, href: navItem.href });
+        // Avoid adding duplicate dashboard link if it's already the root
+        if (navItem.href === '/dashboard' && breadcrumbs.length === 1 && breadcrumbs[0].href === '/dashboard') {
+          // Update the label of the first breadcrumb if it's the active dashboard page
+          // breadcrumbs[0].label = navItem.title; // This line could be added if we want APP_NAME to change to Dashboard when on dashboard
+        } else if (breadcrumbs.every(b => b.href !== navItem.href)) { // Add only if not already present
+             breadcrumbs.push({ label: navItem.title, href: navItem.href });
+        }
       } else {
-        // Fallback for dynamic routes or unlisted paths
+        // Fallback for dynamic routes or unlisted paths not already covered
         const title = segment.charAt(0).toUpperCase() + segment.slice(1).replace(/-/g, ' ');
-        breadcrumbs.push({ label: title, href: currentPath });
+        if (breadcrumbs.every(b => b.href !== currentPath)) {
+            breadcrumbs.push({ label: title, href: currentPath });
+        }
       }
     });
     return breadcrumbs;
@@ -34,7 +43,7 @@ export function Breadcrumbs() {
     <nav aria-label="Breadcrumb" className="hidden md:flex">
       <ol className="flex items-center space-x-1.5 text-sm text-muted-foreground">
         {breadcrumbItems.map((crumb, index) => (
-          <li key={crumb.href} className="flex items-center">
+          <li key={`${crumb.href}-${index}`} className="flex items-center">
             {index > 0 && <ChevronRight className="h-3.5 w-3.5" />}
             {index === breadcrumbItems.length - 1 ? (
               <span className="font-medium text-foreground">{crumb.label}</span>
@@ -49,3 +58,4 @@ export function Breadcrumbs() {
     </nav>
   );
 }
+
