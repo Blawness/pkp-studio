@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useMemo } from 'react';
@@ -72,7 +73,7 @@ export default function CertificatesPage() {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="flex flex-col flex-1 space-y-8">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <h1 className="text-3xl font-headline font-semibold">Certificate Management</h1>
         <Dialog open={isModalOpen} onOpenChange={(open) => { setIsModalOpen(open); if (!open) setEditingCertificate(undefined); }}>
