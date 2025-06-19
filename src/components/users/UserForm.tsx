@@ -1,3 +1,4 @@
+
 "use client";
 
 import React from 'react';
@@ -10,60 +11,118 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import type { User } from '@/lib/types';
 
-const userSchema = z.object({
-  name: z.string().min(1, "Name is required"),
-  email: z.string().email("Invalid email address"),
-  role: z.enum(['admin', 'user'], { required_error: "Role is required" }),
-  password: z.string().min(8, "Password must be at least 8 characters").optional(),
-  confirmPassword: z.string().optional(),
-}).refine(data => {
-  // If password is provided, confirmPassword must match.
-  // This check is only relevant if password field is part of the form (e.g. for new users or password changes)
-  if (data.password && data.password !== data.confirmPassword) {
-    return false;
+const getUserSchema = (isEditing: boolean) => {
+  const baseFields = {
+    name: z.string().min(1, "Name is required"),
+    email: z.string().email("Invalid email address"),
+    role: z.enum(['admin', 'user'], { required_error: "Role is required" }),
+  };
+
+  if (isEditing) {
+    return z.object({
+      ...baseFields,
+      password: z.string().optional().or(z.literal('')), // Optional, allow empty string
+      confirmPassword: z.string().optional().or(z.literal('')),
+    }).superRefine((data, ctx) => {
+      const pass = data.password || ""; // Treat undefined/null as empty string
+      const confirmPass = data.confirmPassword || "";
+
+      if (pass.length > 0) { // If password is being set/changed
+        if (pass.length < 8) {
+          ctx.addIssue({
+            path: ['password'],
+            message: 'Password must be at least 8 characters',
+            code: z.ZodIssueCode.too_small,
+            minimum: 8,
+            type: 'string',
+            inclusive: true,
+          });
+        }
+        if (confirmPass.length === 0) {
+             ctx.addIssue({
+                path: ['confirmPassword'],
+                message: 'Please confirm your new password',
+                code: z.ZodIssueCode.custom,
+             });
+        } else if (pass !== confirmPass) {
+          ctx.addIssue({
+            path: ['confirmPassword'],
+            message: 'Passwords do not match',
+            code: z.ZodIssueCode.custom,
+          });
+        }
+      } else if (confirmPass.length > 0 && pass.length === 0) {
+        // If confirm password is set but main password is not (which is an invalid state for changing password)
+        ctx.addIssue({
+            path: ['password'],
+            message: 'Enter a new password if you wish to change it, or clear confirm password field.',
+            code: z.ZodIssueCode.custom,
+        });
+      }
+    });
+  } else { // Adding new user
+    return z.object({
+      ...baseFields,
+      password: z.string().min(8, "Password must be at least 8 characters"),
+      confirmPassword: z.string().min(8, "Confirm password must be at least 8 characters"),
+    }).refine(data => data.password === data.confirmPassword, {
+      message: "Passwords do not match",
+      path: ["confirmPassword"],
+    });
   }
-  return true;
-}, {
-  message: "Passwords do not match",
-  path: ["confirmPassword"], // path to field that gets the error
-});
+};
 
-
-type UserFormData = z.infer<typeof userSchema>;
+// This type can be used for the data passed to onSubmit
+type UserSubmitData = {
+  name: string;
+  email: string;
+  role: 'admin' | 'user';
+  password?: string; // Password is optional in the submission data
+};
 
 interface UserFormProps {
-  onSubmit: (data: UserFormData) => void;
+  onSubmit: (data: UserSubmitData) => void;
   initialData?: Partial<User>;
   isEditing?: boolean;
   isSubmitting?: boolean;
 }
 
 export function UserForm({ onSubmit, initialData, isEditing = false, isSubmitting }: UserFormProps) {
-  const form = useForm<UserFormData>({
-    resolver: zodResolver(userSchema),
+  const formSchema = React.useMemo(() => getUserSchema(isEditing), [isEditing]);
+  type CurrentFormValues = z.infer<typeof formSchema>;
+
+  const form = useForm<CurrentFormValues>({
+    resolver: zodResolver(formSchema),
     defaultValues: {
       name: initialData?.name || '',
       email: initialData?.email || '',
       role: initialData?.role || 'user',
-      password: '',
+      password: '', // Passwords always start empty in the form
       confirmPassword: '',
     },
   });
-  
-  // Modify schema for editing: password is optional
-  const editUserSchema = userSchema.extend({
-    password: z.string().min(8, "Password must be at least 8 characters").optional().or(z.literal('')),
-    confirmPassword: z.string().optional().or(z.literal('')),
-  });
-  
-  if (isEditing) {
-      form.resolver = zodResolver(editUserSchema);
-  }
 
+  const handleFormSubmit = (data: CurrentFormValues) => {
+    const { confirmPassword, password, ...submissionDataFields } = data;
+    
+    const finalSubmitData: UserSubmitData = {
+        name: submissionDataFields.name,
+        email: submissionDataFields.email,
+        role: submissionDataFields.role,
+    };
+
+    if (password && (password as string).length > 0) {
+      finalSubmitData.password = password as string;
+    }
+    
+    onSubmit(finalSubmitData);
+  };
+  
+  const watchedPassword = form.watch("password");
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
           <FormField
             control={form.control}
@@ -97,7 +156,7 @@ export function UserForm({ onSubmit, initialData, isEditing = false, isSubmittin
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Role</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select onValueChange={field.onChange} defaultValue={field.value as 'admin' | 'user'}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select a role" />
@@ -119,7 +178,7 @@ export function UserForm({ onSubmit, initialData, isEditing = false, isSubmittin
               <FormItem>
                 <FormLabel>{isEditing ? "New Password (optional)" : "Password"}</FormLabel>
                 <FormControl>
-                  <Input type="password" placeholder="********" {...field} />
+                  <Input type="password" placeholder="Enter new password" {...field} value={field.value || ''} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -130,9 +189,15 @@ export function UserForm({ onSubmit, initialData, isEditing = false, isSubmittin
             name="confirmPassword"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Confirm Password</FormLabel>
+                <FormLabel>Confirm {isEditing && watchedPassword && (watchedPassword as string).length > 0 ? "New " : ""}Password</FormLabel>
                 <FormControl>
-                  <Input type="password" placeholder="********" {...field} />
+                  <Input 
+                    type="password" 
+                    placeholder="Confirm password" 
+                    {...field} 
+                    value={field.value || ''}
+                    disabled={isEditing && (!watchedPassword || (watchedPassword as string).length === 0)}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -140,7 +205,7 @@ export function UserForm({ onSubmit, initialData, isEditing = false, isSubmittin
           />
         </div>
         <div className="flex flex-col sm:flex-row sm:justify-end gap-2 pt-4">
-          <Button type="button" variant="outline" onClick={() => form.reset()} className="w-full sm:w-auto">Cancel</Button>
+          <Button type="button" variant="outline" onClick={() => {form.reset();}} className="w-full sm:w-auto">Cancel</Button>
           <Button type="submit" disabled={isSubmitting} className="w-full sm:w-auto">
             {isSubmitting ? 'Submitting...' : (isEditing ? 'Update User' : 'Add User')}
           </Button>
