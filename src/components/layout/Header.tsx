@@ -13,28 +13,23 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, UserCircle, Moon, Sun } from "lucide-react";
+import { UserCircle, Moon, Sun, LogOutIcon } from "lucide-react"; // Changed LogOut to LogOutIcon to avoid name clash
 import { Breadcrumbs } from "@/components/shared/Breadcrumbs";
 import { APP_NAME } from "@/lib/constants";
-import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { useRouter } from "next/navigation";
 
-// Mock theme toggler for now
 const ThemeToggle = () => {
   const [isDark, setIsDark] = React.useState(false);
   React.useEffect(() => {
-    const actualmenteEsOscuro = document.documentElement.classList.contains('dark');
-    setIsDark(actualmenteEsOscuro);
-    // Ensure body class matches initial theme
-    if (actualmenteEsOscuro) {
-      document.body.classList.add('dark-theme-active'); // Example class, adjust as needed
-    } else {
-      document.body.classList.remove('dark-theme-active');
-    }
+    const root = window.document.documentElement;
+    const initialColorValue = root.classList.contains('dark');
+    setIsDark(initialColorValue);
   }, []);
 
   const toggleTheme = () => {
-    document.documentElement.classList.toggle('dark');
-    document.body.classList.toggle('dark-theme-active'); // Toggle body class
+    const root = window.document.documentElement;
+    root.classList.toggle('dark');
     setIsDark(!isDark);
   };
 
@@ -47,15 +42,21 @@ const ThemeToggle = () => {
 
 
 export function Header() {
-  const { toast } = useToast();
+  const { user, logout } = useAuth();
+  const router = useRouter();
 
-  const handleLogout = () => {
-    toast({
-      title: "Logged Out",
-      description: "You have been successfully logged out.",
-    });
-    // In a real app, you would redirect or clear session here
-    // e.g., router.push('/login');
+  const getAvatarFallback = () => {
+    if (user?.name) {
+      return user.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0,2);
+    }
+    if (user?.email) {
+      return user.email[0].toUpperCase();
+    }
+    return "AU"; // Default fallback
+  }
+
+  const handleProfileClick = () => {
+    router.push('/settings'); // Navigate to settings page as profile page
   };
 
   return (
@@ -69,28 +70,32 @@ export function Header() {
       </div>
       <div className="ml-auto flex items-center gap-4">
         <ThemeToggle />
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-              <Avatar className="h-8 w-8">
-                <AvatarImage src="https://placehold.co/40x40.png" alt="User avatar" data-ai-hint="user avatar" />
-                <AvatarFallback>DB</AvatarFallback> 
-              </Avatar>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>My Account</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem>
-              <UserCircle className="mr-2 h-4 w-4" />
-              Profile
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleLogout}>
-              <LogOut className="mr-2 h-4 w-4" />
-              Logout
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {user && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                <Avatar className="h-8 w-8">
+                  {/* Placeholder for actual user image if available */}
+                  {/* <AvatarImage src={user.imageUrl || "https://placehold.co/40x40.png"} alt={user.name || "User avatar"} data-ai-hint="user avatar" /> */}
+                  <AvatarImage src="https://placehold.co/40x40.png" alt={user.name || "User avatar"} data-ai-hint="user avatar" />
+                  <AvatarFallback>{getAvatarFallback()}</AvatarFallback> 
+                </Avatar>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>My Account</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleProfileClick}>
+                <UserCircle className="mr-2 h-4 w-4" />
+                Profile
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={logout}>
+                <LogOutIcon className="mr-2 h-4 w-4" /> {/* Changed LogOut to LogOutIcon */}
+                Logout
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </div>
     </header>
   );

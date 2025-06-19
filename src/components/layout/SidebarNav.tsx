@@ -15,29 +15,23 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { Button } from "@/components/ui/button";
-import { LogOut, Settings } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { LogOutIcon, Settings } from "lucide-react"; // Changed LogOut to LogOutIcon
+import { useAuth } from "@/contexts/AuthContext";
 
 export function SidebarNav() {
   const pathname = usePathname();
   const { open, isMobile } = useSidebar();
-  const { toast } = useToast();
+  const { logout, user } = useAuth();
 
-  const handleLogout = () => {
-    toast({
-      title: "Logged Out",
-      description: "You have been successfully logged out.",
-    });
-    // In a real app, you would redirect or clear session here
-    // e.g., router.push('/login');
-  };
+  // Filter out settings from main nav if it's handled in footer
+  // And only show items if user is logged in
+  const mainNavItems = user ? NAV_ITEMS.filter(item => item.href !== '/settings') : [];
+
 
   return (
     <>
       <SidebarHeader className="flex items-center justify-between p-4">
         <Link href="/dashboard" className="flex items-center gap-2">
-          {/* Placeholder logo */}
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6 text-primary">
             <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path>
           </svg>
@@ -51,48 +45,48 @@ export function SidebarNav() {
       </SidebarHeader>
       <SidebarContent className="p-2">
         <SidebarMenu>
-          {NAV_ITEMS.map((item) => (
-             item.href !== '/settings' && ( // Exclude settings from main nav if it's handled in footer
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={pathname.startsWith(item.href)}
-                    tooltip={{ children: item.title, side: "right", className: "bg-card text-card-foreground border-border shadow-md" }}
-                  >
-                    <Link href={item.href}>
-                      <item.icon />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              )
+          {mainNavItems.map((item) => (
+            <SidebarMenuItem key={item.title}>
+              <SidebarMenuButton
+                asChild
+                isActive={pathname.startsWith(item.href)}
+                tooltip={{ children: item.title, side: "right", className: "bg-card text-card-foreground border-border shadow-md" }}
+              >
+                <Link href={item.href}>
+                  <item.icon />
+                  <span>{item.title}</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
           ))}
         </SidebarMenu>
       </SidebarContent>
       <SidebarFooter className="p-2">
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton 
-              asChild
-              isActive={pathname.startsWith("/settings")}
-              tooltip={{ children: "Settings", side: "right", className: "bg-card text-card-foreground border-border shadow-md" }}
-            >
-              <Link href="/settings">
-                <Settings />
-                <span>Settings</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton 
-              onClick={handleLogout}
-              tooltip={{ children: "Logout", side: "right", className: "bg-card text-card-foreground border-border shadow-md" }}
-            >
-              <LogOut />
-              <span>Logout</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
+        {user && (
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton 
+                asChild
+                isActive={pathname.startsWith("/settings")}
+                tooltip={{ children: "Settings", side: "right", className: "bg-card text-card-foreground border-border shadow-md" }}
+              >
+                <Link href="/settings">
+                  <Settings />
+                  <span>Settings</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton 
+                onClick={logout}
+                tooltip={{ children: "Logout", side: "right", className: "bg-card text-card-foreground border-border shadow-md" }}
+              >
+                <LogOutIcon /> {/* Changed LogOut to LogOutIcon */}
+                <span>Logout</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        )}
       </SidebarFooter>
     </>
   );
