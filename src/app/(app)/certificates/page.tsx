@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { CertificateTable } from '@/components/certificates/CertificateTable';
 import { CertificateForm } from '@/components/certificates/CertificateForm';
 import type { Certificate } from '@/lib/types';
@@ -22,13 +22,21 @@ import { useToast } from "@/hooks/use-toast";
 
 export default function CertificatesPage() {
   const { toast } = useToast();
-  const [certificates, setCertificates] = useState<Certificate[]>(mockCertificates);
+  const [certificates, setCertificates] = useState<Certificate[] | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCertificate, setEditingCertificate] = useState<Certificate | undefined>(undefined);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  useEffect(() => {
+    // Load mock certificates on the client side to avoid hydration mismatch
+    setCertificates(mockCertificates);
+  }, []);
+
   const filteredCertificates = useMemo(() => {
+    if (!certificates) {
+      return []; // Return empty array if certificates are not yet loaded
+    }
     return certificates.filter(cert =>
       Object.values(cert).some(value =>
         String(value).toLowerCase().includes(searchTerm.toLowerCase())
@@ -39,34 +47,46 @@ export default function CertificatesPage() {
   const handleAddCertificate = useCallback(() => {
     setEditingCertificate(undefined);
     setIsModalOpen(true);
-  }, [setEditingCertificate, setIsModalOpen]);
+  }, []);
 
   const handleEditCertificate = useCallback((certificate: Certificate) => {
     setEditingCertificate(certificate);
     setIsModalOpen(true);
-  }, [setEditingCertificate, setIsModalOpen]);
+  }, []);
 
   const handleDeleteCertificate = useCallback((certificateId: string) => {
-    setCertificates(prev => prev.filter(cert => cert.id !== certificateId));
+    setCertificates(prev => prev ? prev.filter(cert => cert.id !== certificateId) : null);
     toast({ variant: "destructive", title: "Certificate Deleted", description: `Certificate ID ${certificateId} has been removed.` });
-  }, [setCertificates, toast]);
+  }, [toast]);
 
   const handleFormSubmit = useCallback(async (data: any) => {
     setIsSubmitting(true);
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
 
-    if (editingCertificate) {
-      setCertificates(prev => prev.map(cert => cert.id === editingCertificate.id ? { ...cert, ...data, id: cert.id } : cert));
-      toast({ title: "Certificate Updated", description: `Certificate ${data.kode} has been updated.` });
-    } else {
-      const newCertificate: Certificate = { ...data, id: `cert-${Date.now()}` };
-      setCertificates(prev => [newCertificate, ...prev]);
-      toast({ title: "Certificate Added", description: `Certificate ${data.kode} has been added.` });
-    }
+    setCertificates(prevCertificates => {
+      const currentCertificates = prevCertificates || [];
+      if (editingCertificate) {
+        toast({ title: "Certificate Updated", description: `Certificate ${data.kode} has been updated.` });
+        return currentCertificates.map(cert => cert.id === editingCertificate.id ? { ...cert, ...data, id: cert.id } : cert);
+      } else {
+        const newCertificate: Certificate = { ...data, id: `cert-${Date.now()}` };
+        toast({ title: "Certificate Added", description: `Certificate ${data.kode} has been added.` });
+        return [newCertificate, ...currentCertificates];
+      }
+    });
+
     setIsSubmitting(false);
     setIsModalOpen(false);
     setEditingCertificate(undefined);
-  }, [editingCertificate, setCertificates, toast, setIsSubmitting, setIsModalOpen, setEditingCertificate]);
+  }, [editingCertificate, toast]);
+  
+  if (certificates === null) {
+    return (
+      <div className="flex flex-col flex-1 space-y-8 items-center justify-center">
+        <p>Loading certificates...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col flex-1 space-y-8">
@@ -92,6 +112,7 @@ export default function CertificatesPage() {
               initialData={editingCertificate}
               isSubmitting={isSubmitting}
             />
+             {/* Add DialogClose to the form's cancel button or handle close explicitly */}
           </DialogContent>
         </Dialog>
       </div>
