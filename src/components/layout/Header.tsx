@@ -16,6 +16,8 @@ import {
 import { LogOut, UserCircle, Moon, Sun } from "lucide-react";
 import { Breadcrumbs } from "@/components/shared/Breadcrumbs";
 import { APP_NAME } from "@/lib/constants";
+import { useAuth } from "@/contexts/AuthContext"; // Import useAuth
+import Link from "next/link";
 
 // Mock theme toggler for now
 const ThemeToggle = () => {
@@ -23,9 +25,8 @@ const ThemeToggle = () => {
   React.useEffect(() => {
     const actualmenteEsOscuro = document.documentElement.classList.contains('dark');
     setIsDark(actualmenteEsOscuro);
-    // Ensure body class matches initial theme
     if (actualmenteEsOscuro) {
-      document.body.classList.add('dark-theme-active'); // Example class, adjust as needed
+      document.body.classList.add('dark-theme-active'); 
     } else {
       document.body.classList.remove('dark-theme-active');
     }
@@ -33,7 +34,7 @@ const ThemeToggle = () => {
 
   const toggleTheme = () => {
     document.documentElement.classList.toggle('dark');
-    document.body.classList.toggle('dark-theme-active'); // Toggle body class
+    document.body.classList.toggle('dark-theme-active'); 
     setIsDark(!isDark);
   };
 
@@ -46,6 +47,23 @@ const ThemeToggle = () => {
 
 
 export function Header() {
+  const { user, logout } = useAuth(); // Get user and logout from AuthContext
+
+  const getInitials = (name?: string, email?: string) => {
+    if (name) {
+      const parts = name.split(' ');
+      if (parts.length > 1) {
+        return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+      }
+      return name.substring(0, 2).toUpperCase();
+    }
+    if (email) {
+      return email.substring(0, 2).toUpperCase();
+    }
+    return "AU"; // Default fallback
+  };
+
+
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 md:px-6">
       <div className="flex items-center gap-2 md:hidden">
@@ -57,28 +75,32 @@ export function Header() {
       </div>
       <div className="ml-auto flex items-center gap-4">
         <ThemeToggle />
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-              <Avatar className="h-8 w-8">
-                <AvatarImage src="https://placehold.co/40x40.png" alt="User avatar" data-ai-hint="user avatar" />
-                <AvatarFallback>DB</AvatarFallback> {/* Updated Fallback */}
-              </Avatar>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>My Account</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem>
-              <UserCircle className="mr-2 h-4 w-4" />
-              Profile
-            </DropdownMenuItem>
-            <DropdownMenuItem>
-              <LogOut className="mr-2 h-4 w-4" />
-              Logout
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {user && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src="https://placehold.co/40x40.png" alt={user.name || user.email} data-ai-hint="user avatar" />
+                  <AvatarFallback>{getInitials(user.name, user.email)}</AvatarFallback>
+                </Avatar>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>My Account</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                 <Link href="/settings"> {/* Assuming /settings is the profile page */}
+                    <UserCircle className="mr-2 h-4 w-4" />
+                    Profile
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={logout}>
+                <LogOut className="mr-2 h-4 w-4" />
+                Logout
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </div>
     </header>
   );

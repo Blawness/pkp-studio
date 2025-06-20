@@ -42,3 +42,10 @@ export type NavItem = {
   icon: React.ElementType;
   disabled?: boolean;
 };
+
+export interface AuthUser {
+  id: string;
+  email: string;
+  name?: string;
+  // Add other relevant user properties
+}
