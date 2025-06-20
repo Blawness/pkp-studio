@@ -27,7 +27,7 @@ export default function CertificatesPage() {
   const { toast } = useToast();
   const [certificates, setCertificates] = useState<Certificate[] | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [suratHakFilter, setSuratHakFilter] useState<string>('all');
+  const [suratHakFilter, setSuratHakFilter] = useState<string>('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCertificate, setEditingCertificate] = useState<Certificate | undefined>(undefined);
   const [isSubmitting, setIsSubmitting] = useState(false);
