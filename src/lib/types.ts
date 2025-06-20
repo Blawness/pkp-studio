@@ -2,7 +2,7 @@
 export interface Certificate {
   id: string;
   kode: string;
-  nama_pemegang: string;
+  nama_pemegang: string[]; // Changed from string to string[]
   surat_hak: string;
   no_sertifikat: string;
   lokasi_tanah: string;

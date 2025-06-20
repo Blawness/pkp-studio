@@ -31,7 +31,7 @@ const suratHakOptions = [
 
 const certificateSchema = z.object({
   kode: z.enum(kodeOptions, { required_error: "Kode is required" }),
-  nama_pemegang: z.string().min(1, "Nama Pemegang is required"),
+  nama_pemegang: z.string().min(1, "Nama Pemegang is required (comma-separated for multiple names)"),
   surat_hak: z.enum(suratHakOptions, { required_error: "Surat Hak is required" }),
   no_sertifikat: z.string().min(1, "No Sertifikat is required"),
   lokasi_tanah: z.string().min(1, "Lokasi Tanah is required"),
@@ -48,7 +48,7 @@ export type CertificateFormData = z.infer<typeof certificateSchema>;
 // Note: Date fields are expected as Timestamps or ISO strings by Data Connect.
 export interface CertificateMutationInput {
   kode: typeof kodeOptions[number];
-  nama_pemegang: string;
+  nama_pemegang: string[]; // Keep as string[] for backend
   surat_hak: typeof suratHakOptions[number];
   no_sertifikat: string;
   lokasi_tanah: string;
@@ -62,8 +62,8 @@ export interface CertificateMutationInput {
 
 
 interface CertificateFormProps {
-  onSubmit: (data: CertificateFormData) => void; // Keep this as CertificateFormData for form handling
-  initialData?: Partial<Certificate>; // This can be the richer Certificate type from DataConnect
+  onSubmit: (data: CertificateFormData) => void; // Handles comma-separated string for nama_pemegang
+  initialData?: Partial<Certificate>; // initialData.nama_pemegang is string[]
   isSubmitting?: boolean;
   onCancel?: () => void;
 }
@@ -74,12 +74,11 @@ export function CertificateForm({ onSubmit, initialData, isSubmitting, onCancel 
     resolver: zodResolver(certificateSchema),
     defaultValues: {
       kode: initialData?.kode ? (kodeOptions.includes(initialData.kode as any) ? initialData.kode as typeof kodeOptions[number] : undefined) : undefined,
-      nama_pemegang: initialData?.nama_pemegang || '',
+      nama_pemegang: initialData?.nama_pemegang && Array.isArray(initialData.nama_pemegang) ? initialData.nama_pemegang.join(', ') : '',
       surat_hak: initialData?.surat_hak ? (suratHakOptions.includes(initialData.surat_hak as any) ? initialData.surat_hak as typeof suratHakOptions[number] : undefined) : undefined,
       no_sertifikat: initialData?.no_sertifikat || '',
       lokasi_tanah: initialData?.lokasi_tanah || '',
       luas_m2: initialData?.luas_m2 || 0,
-      // Convert Firestore Timestamp or string to Date for the form
       tgl_terbit: initialData?.tgl_terbit ? (initialData.tgl_terbit instanceof Date ? initialData.tgl_terbit : new Date( (initialData.tgl_terbit as Timestamp)?.toDate?.() || initialData.tgl_terbit as string )) : undefined,
       surat_ukur: initialData?.surat_ukur || '',
       nib: initialData?.nib || '',
@@ -125,9 +124,9 @@ export function CertificateForm({ onSubmit, initialData, isSubmitting, onCancel 
             name="nama_pemegang"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Nama Pemegang</FormLabel>
+                <FormLabel>Nama Pemegang (pisahkan dengan koma)</FormLabel>
                 <FormControl>
-                  <Input placeholder="e.g., John Doe" {...field} />
+                  <Input placeholder="e.g., John Doe, Jane Smith" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -319,9 +318,3 @@ export function CertificateForm({ onSubmit, initialData, isSubmitting, onCancel 
     </Form>
   );
 }
-
-
-    
-
-    
-

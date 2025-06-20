@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useMemo, useCallback } from 'react';
@@ -11,6 +12,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { DataTablePagination } from '@/components/shared/DataTablePagination';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { MoreHorizontal, FilePenLine, Trash2 } from 'lucide-react';
@@ -55,9 +58,8 @@ export function CertificateTable({
 
   return (
     <div className="rounded-xl border shadow-xs">
-      {/* Removed overflow-x-auto from this div */}
       <div>
-        <Table className="min-w-full"> {/* Removed whitespace-nowrap */}
+        <Table className="min-w-full">
           {caption && <caption className="p-4 text-lg font-semibold text-left">{caption}</caption>}
           <TableHeader>
             <TableRow>
@@ -73,7 +75,33 @@ export function CertificateTable({
               <TableRow key={cert.id}>
                 <TableCell className="px-4 py-2 text-center sm:text-left">{(currentPage - 1) * itemsPerPage + index + 1}</TableCell>
                 <TableCell className="px-4 py-2 text-center sm:text-left">{cert.kode}</TableCell>
-                <TableCell className="px-4 py-2 text-center sm:text-left">{cert.nama_pemegang}</TableCell>
+                <TableCell className="px-4 py-2 text-center sm:text-left">
+                  {cert.nama_pemegang && cert.nama_pemegang.length > 0 ? (
+                    cert.nama_pemegang.length === 1 ? (
+                      cert.nama_pemegang[0]
+                    ) : (
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <span className="cursor-pointer hover:text-primary transition-colors">
+                            {cert.nama_pemegang[0]}
+                            <Badge variant="outline" className="ml-1.5 px-1.5 py-0.5 text-xs">
+                              +{cert.nama_pemegang.length - 1} more
+                            </Badge>
+                          </span>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-3 shadow-lg rounded-md border bg-popover text-popover-foreground">
+                          <ul className="space-y-1">
+                            {cert.nama_pemegang.map((name, idx) => (
+                              <li key={idx} className="text-sm">{name}</li>
+                            ))}
+                          </ul>
+                        </PopoverContent>
+                      </Popover>
+                    )
+                  ) : (
+                    '-' 
+                  )}
+                </TableCell>
                 <TableCell className="px-4 py-2 text-center sm:text-left">{cert.surat_hak}</TableCell>
                 <TableCell className="px-4 py-2 text-center sm:text-left">{cert.no_sertifikat}</TableCell>
                 <TableCell className="px-4 py-2 text-center sm:text-left">{cert.lokasi_tanah}</TableCell>

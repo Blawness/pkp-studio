@@ -3,7 +3,7 @@
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { CertificateTable } from '@/components/certificates/CertificateTable';
-import { CertificateForm } from '@/components/certificates/CertificateForm';
+import { CertificateForm, type CertificateFormData } from '@/components/certificates/CertificateForm';
 import type { Certificate } from '@/lib/types';
 import { mockCertificates } from '@/lib/mockData';
 import { Button } from '@/components/ui/button';
@@ -38,9 +38,12 @@ export default function CertificatesPage() {
       return []; // Return empty array if certificates are not yet loaded
     }
     return certificates.filter(cert =>
-      Object.values(cert).some(value =>
-        String(value).toLowerCase().includes(searchTerm.toLowerCase())
-      )
+      Object.values(cert).some(value => {
+        if (Array.isArray(value)) { // Handle nama_pemegang being an array
+          return value.some(name => String(name).toLowerCase().includes(searchTerm.toLowerCase()));
+        }
+        return String(value).toLowerCase().includes(searchTerm.toLowerCase());
+      })
     );
   }, [certificates, searchTerm]);
 
@@ -59,17 +62,29 @@ export default function CertificatesPage() {
     toast({ variant: "destructive", title: "Certificate Deleted", description: `Certificate ID ${certificateId} has been removed.` });
   }, [toast, setCertificates]);
 
-  const handleFormSubmit = useCallback(async (data: any) => {
+  const handleFormSubmit = useCallback(async (data: CertificateFormData) => {
     setIsSubmitting(true);
     await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
+
+    const namesArray = data.nama_pemegang.split(',').map(name => name.trim()).filter(name => name.length > 0);
 
     setCertificates(prevCertificates => {
       const currentCertificates = prevCertificates || [];
       if (editingCertificate) {
         toast({ title: "Certificate Updated", description: `Certificate ${data.kode} has been updated.` });
-        return currentCertificates.map(cert => cert.id === editingCertificate.id ? { ...cert, ...data, id: cert.id } : cert);
+        return currentCertificates.map(cert => 
+          cert.id === editingCertificate.id 
+            ? { ...cert, ...data, nama_pemegang: namesArray, id: cert.id, tgl_terbit: data.tgl_terbit, pendaftaran_pertama: data.pendaftaran_pertama } 
+            : cert
+        );
       } else {
-        const newCertificate: Certificate = { ...data, id: `cert-${Date.now()}` };
+        const newCertificate: Certificate = { 
+          ...data, 
+          id: `cert-${Date.now()}`, 
+          nama_pemegang: namesArray,
+          tgl_terbit: data.tgl_terbit,
+          pendaftaran_pertama: data.pendaftaran_pertama
+        };
         toast({ title: "Certificate Added", description: `Certificate ${data.kode} has been added.` });
         return [newCertificate, ...currentCertificates];
       }
@@ -111,8 +126,11 @@ export default function CertificatesPage() {
               onSubmit={handleFormSubmit}
               initialData={editingCertificate}
               isSubmitting={isSubmitting}
+              onCancel={() => {
+                setIsModalOpen(false);
+                setEditingCertificate(undefined);
+              }}
             />
-             {/* Add DialogClose to the form's cancel button or handle close explicitly */}
           </DialogContent>
         </Dialog>
       </div>

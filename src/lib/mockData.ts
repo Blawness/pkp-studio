@@ -1,19 +1,27 @@
 
 import type { Certificate, User, ActivityLog, TanahGarapanEntry } from './types';
 
-export const mockCertificates: Certificate[] = Array.from({ length: 25 }, (_, i) => ({
-  id: `cert-${i + 1}`,
-  kode: `K00${i + 1}`,
-  nama_pemegang: `Pemegang ${i + 1}`,
-  surat_hak: `SHM`,
-  no_sertifikat: `SERT-00${i + 1}`,
-  lokasi_tanah: `Lokasi Tanah Contoh No. ${i + 1}, Kota Contoh`,
-  luas_m2: Math.floor(Math.random() * 500) + 100,
-  tgl_terbit: new Date(2020 + Math.floor(i/5), i % 12, (i % 28) + 1),
-  surat_ukur: `SU00${i + 1}`,
-  nib: `NIB00${i + 1}`,
-  pendaftaran_pertama: new Date(2019 + Math.floor(i/5), i % 12, (i % 28) + 1),
-}));
+export const mockCertificates: Certificate[] = Array.from({ length: 25 }, (_, i) => {
+  const singleHolder = [`Pemegang ${i + 1}`];
+  const multipleHolders = [
+    `Pemegang Utama ${i + 1}`,
+    `Pemegang Tambahan A${i + 1}`,
+    `Pemegang Tambahan B${i + 1}`
+  ];
+  return {
+    id: `cert-${i + 1}`,
+    kode: `K00${i + 1}`,
+    nama_pemegang: (i % 3 === 0) ? multipleHolders : singleHolder, // Some have multiple holders
+    surat_hak: `SHM`,
+    no_sertifikat: `SERT-00${i + 1}`,
+    lokasi_tanah: `Lokasi Tanah Contoh No. ${i + 1}, Kota Contoh`,
+    luas_m2: Math.floor(Math.random() * 500) + 100,
+    tgl_terbit: new Date(2020 + Math.floor(i/5), i % 12, (i % 28) + 1),
+    surat_ukur: `SU00${i + 1}`,
+    nib: `NIB00${i + 1}`,
+    pendaftaran_pertama: new Date(2019 + Math.floor(i/5), i % 12, (i % 28) + 1),
+  };
+});
 
 export const mockUsers: User[] = [
   { id: 'user-1', name: 'Admin User', email: 'admin@auracert.com', role: 'admin', createdAt: new Date('2023-01-15T10:00:00Z') },
