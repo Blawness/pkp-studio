@@ -215,6 +215,7 @@ export function CertificateForm({ onSubmit, initialData, isSubmitting, onCancel 
                         date > new Date() || date < new Date("1900-01-01")
                       }
                       initialFocus
+                      captionLayout="dropdown-buttons"
                       fromYear={1900}
                       toYear={currentYear}
                     />
@@ -284,6 +285,7 @@ export function CertificateForm({ onSubmit, initialData, isSubmitting, onCancel 
                         date > new Date() || date < new Date("1900-01-01")
                       }
                       initialFocus
+                      captionLayout="dropdown-buttons"
                       fromYear={1900}
                       toYear={currentYear}
                     />
@@ -322,3 +324,4 @@ export function CertificateForm({ onSubmit, initialData, isSubmitting, onCancel 
     
 
     
+
