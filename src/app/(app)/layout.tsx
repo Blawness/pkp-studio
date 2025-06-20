@@ -48,7 +48,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       </Sidebar>
       <SidebarInset>
         <Header />
-        <main className="flex flex-col flex-1 p-4 md:p-6 lg:p-8">
+        <main className="flex flex-col flex-1 p-4 md:p-6 lg:p-8 pt-16"> {/* Added pt-16 */}
           {children}
         </main>
       </SidebarInset>
