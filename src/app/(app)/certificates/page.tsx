@@ -20,7 +20,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { useToast } from "@/hooks/use-toast";
-import { SURAT_HAK_OPTIONS } from '@/lib/constants';
+import { SURAT_HAK_OPTIONS, KODE_CERTIFICATE_OPTIONS } from '@/lib/constants';
 
 type SortableCertificateKey = 'kode' | 'nama_pemegang' | 'surat_hak' | 'no_sertifikat' | 'luas_m2' | 'tgl_terbit';
 
@@ -29,6 +29,7 @@ export default function CertificatesPage() {
   const [certificates, setCertificates] = useState<Certificate[] | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [suratHakFilter, setSuratHakFilter] = useState<string>('all');
+  const [kodeFilter, setKodeFilter] = useState<string>('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCertificate, setEditingCertificate] = useState<Certificate | undefined>(undefined);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -51,6 +52,7 @@ export default function CertificatesPage() {
     }
     let filtered = certificates.filter(cert =>
       (suratHakFilter === 'all' || cert.surat_hak === suratHakFilter) &&
+      (kodeFilter === 'all' || cert.kode === kodeFilter) &&
       (Object.values(cert).some(value => {
         if (Array.isArray(value)) {
           return value.some(name => String(name).toLowerCase().includes(searchTerm.toLowerCase()));
@@ -69,7 +71,7 @@ export default function CertificatesPage() {
           valB = Array.isArray(valB) ? valB[0] || '' : '';
         }
         
-        if (sortConfig.key === 'tgl_terbit') { // Removed 'pendaftaran_pertama' as it's not a SortableCertificateKey
+        if (sortConfig.key === 'tgl_terbit') { 
             valA = new Date(valA as Date).getTime();
             valB = new Date(valB as Date).getTime();
         }
@@ -85,7 +87,7 @@ export default function CertificatesPage() {
       });
     }
     return filtered;
-  }, [certificates, searchTerm, suratHakFilter, sortConfig]);
+  }, [certificates, searchTerm, suratHakFilter, kodeFilter, sortConfig]);
 
   const handleAddCertificate = useCallback(() => {
     setEditingCertificate(undefined);
@@ -175,7 +177,7 @@ export default function CertificatesPage() {
         </Dialog>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
         <div className="relative md:col-span-2">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
           <Input
@@ -185,6 +187,20 @@ export default function CertificatesPage() {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
+        </div>
+        <div>
+          <Label htmlFor="kodeFilter" className="text-sm font-medium">Filter by Kode</Label>
+          <Select value={kodeFilter} onValueChange={setKodeFilter}>
+            <SelectTrigger id="kodeFilter" className="w-full mt-1">
+              <SelectValue placeholder="All Kode" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Kode</SelectItem>
+              {KODE_CERTIFICATE_OPTIONS.map(option => (
+                <SelectItem key={option} value={option}>{option}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div>
           <Label htmlFor="suratHakFilter" className="text-sm font-medium">Filter by Surat Hak</Label>
