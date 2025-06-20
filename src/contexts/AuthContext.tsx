@@ -16,6 +16,10 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const MOCK_ADMIN_EMAIL = 'admin@auracert.com';
+const MOCK_USER_EMAIL = 'user@auracert.com';
+const MOCK_SHARED_PASSWORD = 'password'; // Template password
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true); // Start with loading true to check initial auth status
@@ -42,17 +46,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // Mock API call
     return new Promise((resolve) => {
       setTimeout(() => {
-        if ((email === 'admin@auracert.com' && pass === 'password') || (email === 'user@auracert.com' && pass === 'password')) {
-          const mockUser: AuthUser = { id: `user-${Date.now()}`, email, name: email.split('@')[0] };
+        if (
+          (email.toLowerCase() === MOCK_ADMIN_EMAIL && pass === MOCK_SHARED_PASSWORD) ||
+          (email.toLowerCase() === MOCK_USER_EMAIL && pass === MOCK_SHARED_PASSWORD)
+        ) {
+          const mockUser: AuthUser = { 
+            id: `user-${Date.now()}`, 
+            email, 
+            name: email.split('@')[0] 
+          };
           setUser(mockUser);
           localStorage.setItem('authUser', JSON.stringify(mockUser));
-           setTimeout(() => {
+          setTimeout(() => {
             toast({ title: "Login Successful", description: `Welcome back, ${mockUser.name}!` });
           }, 0);
           resolve(true);
         } else {
           setAuthError('Invalid email or password.');
-           setTimeout(() => {
+          setTimeout(() => {
             toast({ variant: "destructive", title: "Login Failed", description: "Invalid email or password." });
           }, 0);
           resolve(false);
@@ -87,3 +98,4 @@ export const useAuth = (): AuthContextType => {
   }
   return context;
 };
+
