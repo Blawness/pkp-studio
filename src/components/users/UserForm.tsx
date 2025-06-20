@@ -1,3 +1,4 @@
+
 "use client";
 
 import React from 'react';
@@ -10,26 +11,46 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import type { User } from '@/lib/types';
 
-const userSchema = z.object({
+// Base schema representing the form's data structure.
+// Passwords are optional and can be empty strings (for edit mode).
+const baseFormSchema = z.object({
   name: z.string().min(1, "Name is required"),
   email: z.string().email("Invalid email address"),
-  role: z.enum(['admin', 'user'], { required_error: "Role is required" }),
-  password: z.string().min(8, "Password must be at least 8 characters").optional(),
-  confirmPassword: z.string().optional(),
-}).refine(data => {
-  // If password is provided, confirmPassword must match.
-  // This check is only relevant if password field is part of the form (e.g. for new users or password changes)
-  if (data.password && data.password !== data.confirmPassword) {
-    return false;
+  role: z.enum(['admin', 'user'] as const, { required_error: "Role is required" }),
+  password: z.string().min(8, "Password must be at least 8 characters").optional().or(z.literal('')),
+  confirmPassword: z.string().optional().or(z.literal('')),
+});
+
+type UserFormData = z.infer<typeof baseFormSchema>;
+
+// Refinement logic for password confirmation
+const passwordConfirmationRefinement = (data: { password?: string; confirmPassword?: string }) => {
+  // If a password is provided (not undefined, not an empty string for form purposes), it must match confirmation.
+  if (data.password && data.password.length > 0) {
+    return data.password === data.confirmPassword;
   }
-  return true;
-}, {
+  return true; // Passes if no new password is being set
+};
+const passwordConfirmationParams = {
   message: "Passwords do not match",
-  path: ["confirmPassword"], // path to field that gets the error
+  path: ["confirmPassword"],
+};
+
+// Schema for adding a new user (passwords are required)
+const addUserSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  email: z.string().email("Invalid email address"),
+  role: z.enum(['admin', 'user'] as const, { required_error: "Role is required" }),
+  password: z.string().min(8, "Password must be at least 8 characters"),
+  confirmPassword: z.string().min(1, "Confirm password is required"), // Ensure confirm is not empty
+}).refine(data => data.password === data.confirmPassword, { // Simpler refine for add, as both are required
+  message: "Passwords do not match",
+  path: ["confirmPassword"],
 });
 
 
-type UserFormData = z.infer<typeof userSchema>;
+// Schema for editing an existing user (passwords are optional, but if provided, must match)
+const editUserSchema = baseFormSchema.refine(passwordConfirmationRefinement, passwordConfirmationParams);
 
 interface UserFormProps {
   onSubmit: (data: UserFormData) => void;
@@ -40,27 +61,16 @@ interface UserFormProps {
 
 export function UserForm({ onSubmit, initialData, isEditing = false, isSubmitting }: UserFormProps) {
   const form = useForm<UserFormData>({
-    resolver: zodResolver(userSchema),
+    resolver: zodResolver(isEditing ? editUserSchema : addUserSchema),
     defaultValues: {
       name: initialData?.name || '',
       email: initialData?.email || '',
       role: initialData?.role || 'user',
-      password: '',
-      confirmPassword: '',
+      password: '', // Default to empty string, user types new password if needed
+      confirmPassword: '', // Default to empty string
     },
   });
   
-  // Modify schema for editing: password is optional
-  const editUserSchema = userSchema.extend({
-    password: z.string().min(8, "Password must be at least 8 characters").optional().or(z.literal('')),
-    confirmPassword: z.string().optional().or(z.literal('')),
-  });
-  
-  if (isEditing) {
-      form.resolver = zodResolver(editUserSchema);
-  }
-
-
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -149,3 +159,4 @@ export function UserForm({ onSubmit, initialData, isEditing = false, isSubmittin
     </Form>
   );
 }
+
