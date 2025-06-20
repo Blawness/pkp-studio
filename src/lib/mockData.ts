@@ -1,4 +1,5 @@
-import type { Certificate, User, ActivityLog } from './types';
+
+import type { Certificate, User, ActivityLog, TanahGarapanEntry } from './types';
 
 export const mockCertificates: Certificate[] = Array.from({ length: 25 }, (_, i) => ({
   id: `cert-${i + 1}`,
@@ -38,3 +39,56 @@ export const mockActivityLogs: ActivityLog[] = Array.from({ length: 50 }, (_, i)
     timestamp: new Date(Date.now() - i * 1000 * 60 * 60 * (Math.random() * 5 + 1)), // Logs from now to a few days ago
   };
 });
+
+export const mockTanahGarapanData: TanahGarapanEntry[] = [
+  {
+    id: 'tg-1',
+    letakTanah: 'Blok Sawah A1',
+    namaPemegangHak: 'Budi Santoso',
+    letterC: 'C-101',
+    nomorSuratKeteranganGarapan: 'SKG/001/IV/2023',
+    luas: 1500,
+    keterangan: 'Sawah produktif, dekat irigasi',
+    createdAt: new Date('2023-04-10T08:00:00Z'),
+  },
+  {
+    id: 'tg-2',
+    letakTanah: 'Blok Sawah A1',
+    namaPemegangHak: 'Siti Aminah',
+    letterC: 'C-102',
+    nomorSuratKeteranganGarapan: 'SKG/002/IV/2023',
+    luas: 1200,
+    keterangan: 'Sebelah sawah Budi Santoso',
+    createdAt: new Date('2023-04-12T09:30:00Z'),
+  },
+  {
+    id: 'tg-3',
+    letakTanah: 'Blok Kebun B2',
+    namaPemegangHak: 'Ahmad Dahlan',
+    letterC: 'C-205',
+    nomorSuratKeteranganGarapan: 'SKG/003/V/2023',
+    luas: 2500,
+    keterangan: 'Tanaman jagung dan singkong',
+    createdAt: new Date('2023-05-01T14:15:00Z'),
+  },
+  {
+    id: 'tg-4',
+    letakTanah: 'Area Hutan Lindung Tepi',
+    namaPemegangHak: 'Komunitas Adat XYZ',
+    letterC: 'C-500 (Kolektif)',
+    nomorSuratKeteranganGarapan: 'SKG/KOM/001/I/2024',
+    luas: 10000,
+    keterangan: 'Pengelolaan hutan oleh masyarakat adat',
+    createdAt: new Date('2024-01-20T10:00:00Z'),
+  },
+  {
+    id: 'tg-5',
+    letakTanah: 'Blok Kebun B2',
+    namaPemegangHak: 'Dewi Lestari',
+    letterC: 'C-208',
+    nomorSuratKeteranganGarapan: 'SKG/004/VI/2023',
+    luas: 800,
+    keterangan: 'Tanaman sayuran organik',
+    createdAt: new Date('2023-06-15T11:00:00Z'),
+  },
+];

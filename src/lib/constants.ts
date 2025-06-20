@@ -1,6 +1,6 @@
 
 import type { NavItem } from '@/lib/types';
-import { LayoutDashboard, ScrollText, Users, History, Settings } from 'lucide-react';
+import { LayoutDashboard, ScrollText, Users, History, Settings, Tractor } from 'lucide-react';
 
 export const NAV_ITEMS: NavItem[] = [
   {
@@ -12,6 +12,11 @@ export const NAV_ITEMS: NavItem[] = [
     title: 'Certificates',
     href: '/certificates',
     icon: ScrollText,
+  },
+  {
+    title: 'Tanah Garapan',
+    href: '/tanah-garapan',
+    icon: Tractor,
   },
   {
     title: 'Users',
@@ -31,4 +36,3 @@ export const NAV_ITEMS: NavItem[] = [
 ];
 
 export const APP_NAME = "Database PKP";
-

@@ -1,3 +1,4 @@
+
 export interface Certificate {
   id: string;
   kode: string;
@@ -48,4 +49,15 @@ export interface AuthUser {
   email: string;
   name?: string;
   // Add other relevant user properties
+}
+
+export interface TanahGarapanEntry {
+  id: string;
+  letakTanah: string; // e.g., "Blok A Sawah"
+  namaPemegangHak: string;
+  letterC: string;
+  nomorSuratKeteranganGarapan: string;
+  luas: number; // in m2
+  keterangan?: string;
+  createdAt: Date;
 }
