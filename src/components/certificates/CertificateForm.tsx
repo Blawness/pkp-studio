@@ -69,6 +69,7 @@ interface CertificateFormProps {
 }
 
 export function CertificateForm({ onSubmit, initialData, isSubmitting, onCancel }: CertificateFormProps) {
+  const currentYear = new Date().getFullYear();
   const form = useForm<CertificateFormData>({
     resolver: zodResolver(certificateSchema),
     defaultValues: {
@@ -214,6 +215,9 @@ export function CertificateForm({ onSubmit, initialData, isSubmitting, onCancel 
                         date > new Date() || date < new Date("1900-01-01")
                       }
                       initialFocus
+                      captionLayout="dropdown-buttons"
+                      fromYear={1900}
+                      toYear={currentYear}
                     />
                   </PopoverContent>
                 </Popover>
@@ -281,6 +285,9 @@ export function CertificateForm({ onSubmit, initialData, isSubmitting, onCancel 
                         date > new Date() || date < new Date("1900-01-01")
                       }
                       initialFocus
+                      captionLayout="dropdown-buttons"
+                      fromYear={1900}
+                      toYear={currentYear}
                     />
                   </PopoverContent>
                 </Popover>
