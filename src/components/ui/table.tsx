@@ -5,15 +5,13 @@ import { cn } from "@/lib/utils"
 const Table = React.forwardRef<
   HTMLTableElement,
   React.HTMLAttributes<HTMLTableElement>
->(({ className, children, ...otherProps }, ref) => ( // Explicitly destructure children
+>(({ className, children, ...otherProps }, ref) => (
   <div className="relative w-full overflow-hidden"> {/* Changed overflow-auto to overflow-hidden */}
     <table
       ref={ref}
       className={cn("w-full caption-bottom text-sm", className)}
       {...otherProps} // Spread other props
-    >
-      {children} {/* Render children explicitly */}
-    </table>
+    >{children}</table> {/* Ensure no whitespace around children */}
   </div>
 ))
 Table.displayName = "Table"
