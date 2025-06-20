@@ -1,7 +1,7 @@
 
 "use client"; 
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { CertificateTable } from '@/components/certificates/CertificateTable';
 import type { Certificate, StatCardData, User } from '@/lib/types';
