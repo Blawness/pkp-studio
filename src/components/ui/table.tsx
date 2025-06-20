@@ -1,3 +1,4 @@
+
 import * as React from "react"
 
 import { cn } from "@/lib/utils"
@@ -5,15 +6,15 @@ import { cn } from "@/lib/utils"
 const Table = React.forwardRef<
   HTMLTableElement,
   React.HTMLAttributes<HTMLTableElement>
->(({ className, children, ...otherProps }, ref) => (
-  <div className="relative w-full overflow-hidden"> {/* Changed overflow-auto to overflow-hidden */}
+>(({ className, ...props }, ref) => ( // Children are implicitly in ...props
+  <div className="relative w-full overflow-hidden"> {/* User had changed this from overflow-auto */}
     <table
       ref={ref}
       className={cn("w-full caption-bottom text-sm", className)}
-      {...otherProps} // Spread other props
-    >{children}</table> {/* Ensure no whitespace around children */}
+      {...props} // Spread all props, React handles children for self-closing table
+    />
   </div>
-))
+));
 Table.displayName = "Table"
 
 const TableHeader = React.forwardRef<
