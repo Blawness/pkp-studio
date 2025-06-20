@@ -17,22 +17,13 @@ import { cn } from '@/lib/utils';
 import { CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import type { Timestamp } from 'firebase-admin/firestore';
-
-const kodeOptions = ["LPN01", "PKP01"] as const;
-const suratHakOptions = [
-  "SHM",
-  "Hak Guna Usaha",
-  "Hak Guna Bangunana",
-  "Hak Pakai",
-  "Hak Pengelolaan",
-  "Hak Wakaf"
-] as const;
+import { KODE_CERTIFICATE_OPTIONS, SURAT_HAK_OPTIONS } from '@/lib/constants';
 
 
 const certificateSchema = z.object({
-  kode: z.enum(kodeOptions, { required_error: "Kode is required" }),
+  kode: z.enum(KODE_CERTIFICATE_OPTIONS, { required_error: "Kode is required" }),
   nama_pemegang: z.string().min(1, "Nama Pemegang is required (comma-separated for multiple names)"),
-  surat_hak: z.enum(suratHakOptions, { required_error: "Surat Hak is required" }),
+  surat_hak: z.enum(SURAT_HAK_OPTIONS, { required_error: "Surat Hak is required" }),
   no_sertifikat: z.string().min(1, "No Sertifikat is required"),
   lokasi_tanah: z.string().min(1, "Lokasi Tanah is required"),
   luas_m2: z.coerce.number().int().positive("Luas M2 must be a positive number"),
@@ -44,26 +35,24 @@ const certificateSchema = z.object({
 
 export type CertificateFormData = z.infer<typeof certificateSchema>;
 
-// This interface is for the data structure when communicating with the Data Connect backend.
-// Note: Date fields are expected as Timestamps or ISO strings by Data Connect.
 export interface CertificateMutationInput {
-  kode: typeof kodeOptions[number];
-  nama_pemegang: string[]; // Keep as string[] for backend
-  surat_hak: typeof suratHakOptions[number];
+  kode: typeof KODE_CERTIFICATE_OPTIONS[number];
+  nama_pemegang: string[]; 
+  surat_hak: typeof SURAT_HAK_OPTIONS[number];
   no_sertifikat: string;
   lokasi_tanah: string;
   luas_m2: number;
-  tgl_terbit: Date | Timestamp | string; // Allow Date for form, Timestamp/string for backend
+  tgl_terbit: Date | Timestamp | string; 
   surat_ukur: string;
   nib: string;
-  pendaftaran_pertama: Date | Timestamp | string; // Allow Date for form, Timestamp/string for backend
-  id?: string; // Optional for updates
+  pendaftaran_pertama: Date | Timestamp | string; 
+  id?: string; 
 }
 
 
 interface CertificateFormProps {
-  onSubmit: (data: CertificateFormData) => void; // Handles comma-separated string for nama_pemegang
-  initialData?: Partial<Certificate>; // initialData.nama_pemegang is string[]
+  onSubmit: (data: CertificateFormData) => void; 
+  initialData?: Partial<Certificate>; 
   isSubmitting?: boolean;
   onCancel?: () => void;
 }
@@ -73,9 +62,9 @@ export function CertificateForm({ onSubmit, initialData, isSubmitting, onCancel 
   const form = useForm<CertificateFormData>({
     resolver: zodResolver(certificateSchema),
     defaultValues: {
-      kode: initialData?.kode ? (kodeOptions.includes(initialData.kode as any) ? initialData.kode as typeof kodeOptions[number] : undefined) : undefined,
+      kode: initialData?.kode ? (KODE_CERTIFICATE_OPTIONS.includes(initialData.kode as any) ? initialData.kode as typeof KODE_CERTIFICATE_OPTIONS[number] : undefined) : undefined,
       nama_pemegang: initialData?.nama_pemegang && Array.isArray(initialData.nama_pemegang) ? initialData.nama_pemegang.join(', ') : '',
-      surat_hak: initialData?.surat_hak ? (suratHakOptions.includes(initialData.surat_hak as any) ? initialData.surat_hak as typeof suratHakOptions[number] : undefined) : undefined,
+      surat_hak: initialData?.surat_hak ? (SURAT_HAK_OPTIONS.includes(initialData.surat_hak as any) ? initialData.surat_hak as typeof SURAT_HAK_OPTIONS[number] : undefined) : undefined,
       no_sertifikat: initialData?.no_sertifikat || '',
       lokasi_tanah: initialData?.lokasi_tanah || '',
       luas_m2: initialData?.luas_m2 || 0,
@@ -110,7 +99,7 @@ export function CertificateForm({ onSubmit, initialData, isSubmitting, onCancel 
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {kodeOptions.map(option => (
+                    {KODE_CERTIFICATE_OPTIONS.map(option => (
                       <SelectItem key={option} value={option}>{option}</SelectItem>
                     ))}
                   </SelectContent>
@@ -145,7 +134,7 @@ export function CertificateForm({ onSubmit, initialData, isSubmitting, onCancel 
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {suratHakOptions.map(option => (
+                    {SURAT_HAK_OPTIONS.map(option => (
                       <SelectItem key={option} value={option}>{option}</SelectItem>
                     ))}
                   </SelectContent>
