@@ -68,7 +68,7 @@ export default function CertificatesPage() {
           valB = Array.isArray(valB) ? valB[0] || '' : '';
         }
         
-        if (sortConfig.key === 'tgl_terbit' || sortConfig.key === 'pendaftaran_pertama') {
+        if (sortConfig.key === 'tgl_terbit') { // Removed 'pendaftaran_pertama' as it's not a SortableCertificateKey
             valA = new Date(valA as Date).getTime();
             valB = new Date(valB as Date).getTime();
         }
