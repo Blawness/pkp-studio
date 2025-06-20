@@ -1,3 +1,4 @@
+
 "use client";
 
 import React from 'react';
@@ -10,15 +11,28 @@ import { Textarea } from '@/components/ui/textarea';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { Certificate } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
+import type { Timestamp } from 'firebase-admin/firestore';
+
+const kodeOptions = ["LPN01", "PKP01"] as const;
+const suratHakOptions = [
+  "SHM",
+  "Hak Guna Usaha",
+  "Hak Guna Bangunana",
+  "Hak Pakai",
+  "Hak Pengelolaan",
+  "Hak Wakaf"
+] as const;
+
 
 const certificateSchema = z.object({
-  kode: z.string().min(1, "Kode is required"),
+  kode: z.enum(kodeOptions, { required_error: "Kode is required" }),
   nama_pemegang: z.string().min(1, "Nama Pemegang is required"),
-  surat_hak: z.string().min(1, "Surat Hak is required"),
+  surat_hak: z.enum(suratHakOptions, { required_error: "Surat Hak is required" }),
   no_sertifikat: z.string().min(1, "No Sertifikat is required"),
   lokasi_tanah: z.string().min(1, "Lokasi Tanah is required"),
   luas_m2: z.coerce.number().int().positive("Luas M2 must be a positive number"),
@@ -28,24 +42,56 @@ const certificateSchema = z.object({
   pendaftaran_pertama: z.date({ required_error: "Pendaftaran Pertama is required" }),
 });
 
-type CertificateFormData = z.infer<typeof certificateSchema>;
+export type CertificateFormData = z.infer<typeof certificateSchema>;
 
-interface CertificateFormProps {
-  onSubmit: (data: CertificateFormData) => void;
-  initialData?: Partial<Certificate>;
-  isSubmitting?: boolean;
+// This interface is for the data structure when communicating with the Data Connect backend.
+// Note: Date fields are expected as Timestamps or ISO strings by Data Connect.
+export interface CertificateMutationInput {
+  kode: typeof kodeOptions[number];
+  nama_pemegang: string;
+  surat_hak: typeof suratHakOptions[number];
+  no_sertifikat: string;
+  lokasi_tanah: string;
+  luas_m2: number;
+  tgl_terbit: Date | Timestamp | string; // Allow Date for form, Timestamp/string for backend
+  surat_ukur: string;
+  nib: string;
+  pendaftaran_pertama: Date | Timestamp | string; // Allow Date for form, Timestamp/string for backend
+  id?: string; // Optional for updates
 }
 
-export function CertificateForm({ onSubmit, initialData, isSubmitting }: CertificateFormProps) {
+
+interface CertificateFormProps {
+  onSubmit: (data: CertificateFormData) => void; // Keep this as CertificateFormData for form handling
+  initialData?: Partial<Certificate>; // This can be the richer Certificate type from DataConnect
+  isSubmitting?: boolean;
+  onCancel?: () => void;
+}
+
+export function CertificateForm({ onSubmit, initialData, isSubmitting, onCancel }: CertificateFormProps) {
   const form = useForm<CertificateFormData>({
     resolver: zodResolver(certificateSchema),
     defaultValues: {
-      ...initialData,
+      kode: initialData?.kode ? (kodeOptions.includes(initialData.kode as any) ? initialData.kode as typeof kodeOptions[number] : undefined) : undefined,
+      nama_pemegang: initialData?.nama_pemegang || '',
+      surat_hak: initialData?.surat_hak ? (suratHakOptions.includes(initialData.surat_hak as any) ? initialData.surat_hak as typeof suratHakOptions[number] : undefined) : undefined,
+      no_sertifikat: initialData?.no_sertifikat || '',
+      lokasi_tanah: initialData?.lokasi_tanah || '',
       luas_m2: initialData?.luas_m2 || 0,
-      tgl_terbit: initialData?.tgl_terbit ? new Date(initialData.tgl_terbit) : undefined,
-      pendaftaran_pertama: initialData?.pendaftaran_pertama ? new Date(initialData.pendaftaran_pertama) : undefined,
+      // Convert Firestore Timestamp or string to Date for the form
+      tgl_terbit: initialData?.tgl_terbit ? (initialData.tgl_terbit instanceof Date ? initialData.tgl_terbit : new Date( (initialData.tgl_terbit as Timestamp)?.toDate?.() || initialData.tgl_terbit as string )) : undefined,
+      surat_ukur: initialData?.surat_ukur || '',
+      nib: initialData?.nib || '',
+      pendaftaran_pertama: initialData?.pendaftaran_pertama ? (initialData.pendaftaran_pertama instanceof Date ? initialData.pendaftaran_pertama : new Date( (initialData.pendaftaran_pertama as Timestamp)?.toDate?.() || initialData.pendaftaran_pertama as string )) : undefined,
     },
   });
+
+  const handleCancel = () => {
+    form.reset();
+    if (onCancel) {
+      onCancel();
+    }
+  };
 
   return (
     <Form {...form}>
@@ -57,9 +103,18 @@ export function CertificateForm({ onSubmit, initialData, isSubmitting }: Certifi
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Kode</FormLabel>
-                <FormControl>
-                  <Input placeholder="e.g., K001" {...field} />
-                </FormControl>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select Kode" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {kodeOptions.map(option => (
+                      <SelectItem key={option} value={option}>{option}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <FormMessage />
               </FormItem>
             )}
@@ -83,9 +138,18 @@ export function CertificateForm({ onSubmit, initialData, isSubmitting }: Certifi
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Surat Hak</FormLabel>
-                <FormControl>
-                  <Input placeholder="e.g., SHM" {...field} />
-                </FormControl>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select Surat Hak" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {suratHakOptions.map(option => (
+                      <SelectItem key={option} value={option}>{option}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <FormMessage />
               </FormItem>
             )}
@@ -110,7 +174,7 @@ export function CertificateForm({ onSubmit, initialData, isSubmitting }: Certifi
               <FormItem>
                 <FormLabel>Luas (M2)</FormLabel>
                 <FormControl>
-                  <Input type="number" placeholder="e.g., 150" {...field} />
+                  <Input type="number" placeholder="e.g., 150" {...field} onChange={e => field.onChange(parseInt(e.target.value,10) || 0)} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -239,7 +303,7 @@ export function CertificateForm({ onSubmit, initialData, isSubmitting }: Certifi
           />
         </div>
         <div className="flex flex-col sm:flex-row sm:justify-end gap-2 pt-4">
-            <Button type="button" variant="outline" onClick={() => form.reset()} className="w-full sm:w-auto">Cancel</Button>
+            <Button type="button" variant="outline" onClick={handleCancel} className="w-full sm:w-auto">Cancel</Button>
             <Button type="submit" disabled={isSubmitting} className="w-full sm:w-auto">
               {isSubmitting ? 'Submitting...' : (initialData?.id ? 'Update Certificate' : 'Add Certificate')}
             </Button>
@@ -248,3 +312,6 @@ export function CertificateForm({ onSubmit, initialData, isSubmitting }: Certifi
     </Form>
   );
 }
+
+
+    
