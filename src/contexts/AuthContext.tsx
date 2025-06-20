@@ -16,8 +16,8 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const MOCK_ADMIN_EMAIL = 'admin@auracert.com';
-const MOCK_USER_EMAIL = 'user@auracert.com';
+const MOCK_ADMIN_EMAIL = 'admin@pkp.com';
+const MOCK_USER_EMAIL = 'user@pkp.com';
 const MOCK_SHARED_PASSWORD = 'password'; // Template password
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {

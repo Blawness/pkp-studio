@@ -16,10 +16,11 @@ import {
 import { LogOut, UserCircle, Moon, Sun } from "lucide-react";
 import { Breadcrumbs } from "@/components/shared/Breadcrumbs";
 import { APP_NAME } from "@/lib/constants";
-import { useAuth } from "@/contexts/AuthContext"; // Import useAuth
+import { useAuth } from "@/contexts/AuthContext"; 
 import Link from "next/link";
+import { useIsMobile } from "@/hooks/use-mobile";
 
-// Mock theme toggler for now
+// Mock theme toggler
 const ThemeToggle = () => {
   const [isDark, setIsDark] = React.useState(false);
   React.useEffect(() => {
@@ -47,7 +48,8 @@ const ThemeToggle = () => {
 
 
 export function Header() {
-  const { user, logout } = useAuth(); // Get user and logout from AuthContext
+  const { user, logout } = useAuth(); 
+  const isMobile = useIsMobile();
 
   const getInitials = (name?: string, email?: string) => {
     if (name) {
@@ -65,15 +67,21 @@ export function Header() {
 
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 md:px-6">
-      <div className="flex items-center gap-2 md:hidden">
-        <SidebarTrigger />
-        <span className="font-headline text-lg font-semibold">{APP_NAME}</span>
+    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60 md:px-6">
+      {/* Left Group */}
+      <div className="flex items-center gap-2">
+        {isMobile ? (
+          <>
+            <SidebarTrigger />
+            <span className="font-headline text-lg font-semibold">{APP_NAME}</span>
+          </>
+        ) : (
+          <Breadcrumbs />
+        )}
       </div>
-      <div className="hidden md:block">
-        <Breadcrumbs />
-      </div>
-      <div className="ml-auto flex items-center gap-4">
+
+      {/* Right Group */}
+      <div className="flex items-center gap-3 md:gap-4">
         <ThemeToggle />
         {user && (
           <DropdownMenu>
