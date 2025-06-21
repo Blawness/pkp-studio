@@ -110,16 +110,14 @@ export default function CertificatesPage() {
   }, []);
 
   const handleDeleteCertificate = useCallback(async (certificateId: string) => {
-    setIsSubmitting(true);
     try {
       await deleteCertificate(certificateId);
       toast({ variant: "destructive", title: "Certificate Deleted", description: "Certificate has been removed." });
       fetchCertificates(); // Refresh data
     } catch (error) {
       console.error("Failed to delete certificate:", error);
-      toast({ variant: "destructive", title: "Error", description: "Failed to delete certificate." });
-    } finally {
-      setIsSubmitting(false);
+      const errorMessage = error instanceof Error ? error.message : "Failed to delete certificate.";
+      toast({ variant: "destructive", title: "Error", description: errorMessage });
     }
   }, [toast, fetchCertificates]);
 
@@ -133,14 +131,15 @@ export default function CertificatesPage() {
         await addCertificate(data);
         toast({ title: "Certificate Added", description: "New certificate has been added." });
       }
-      fetchCertificates(); // Refresh data
-    } catch (error) {
-      console.error("Failed to save certificate:", error);
-      toast({ variant: "destructive", title: "Error", description: "Failed to save certificate." });
-    } finally {
-      setIsSubmitting(false);
+      fetchCertificates();
       setIsModalOpen(false);
       setEditingCertificate(undefined);
+    } catch (error) {
+      console.error("Failed to save certificate:", error);
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+      toast({ variant: "destructive", title: "Save Failed", description: errorMessage });
+    } finally {
+      setIsSubmitting(false);
     }
   }, [editingCertificate, toast, fetchCertificates]);
   

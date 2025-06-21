@@ -8,6 +8,7 @@ import type { UserSubmitData } from '@/components/users/UserForm';
 import type { TanahGarapanFormData } from '@/components/tanah-garapan/TanahGarapanForm';
 import type { AuthUser } from './types';
 import bcrypt from 'bcryptjs';
+import { Prisma } from '@prisma/client';
 
 // --- AUTH ACTIONS ---
 export async function login(email: string, pass: string): Promise<AuthUser | null> {
@@ -58,28 +59,42 @@ export async function getCertificates() {
 }
 
 export async function addCertificate(data: CertificateFormData) {
-  const namesArray = data.nama_pemegang.split(',').map(name => name.trim()).filter(name => name.length > 0);
-  await prisma.certificate.create({
-    data: {
-      ...data,
-      nama_pemegang: namesArray,
-    },
-  });
-  revalidatePath('/certificates');
-  revalidatePath('/dashboard');
+  try {
+    const namesArray = data.nama_pemegang.split(',').map(name => name.trim()).filter(name => name.length > 0);
+    await prisma.certificate.create({
+      data: {
+        ...data,
+        nama_pemegang: namesArray,
+      },
+    });
+    revalidatePath('/certificates');
+    revalidatePath('/dashboard');
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      throw new Error(`A certificate with number '${data.no_sertifikat}' already exists.`);
+    }
+    throw new Error('An unexpected error occurred while adding the certificate.');
+  }
 }
 
 export async function updateCertificate(id: string, data: CertificateFormData) {
-  const namesArray = data.nama_pemegang.split(',').map(name => name.trim()).filter(name => name.length > 0);
-  await prisma.certificate.update({
-    where: { id },
-    data: {
-      ...data,
-      nama_pemegang: namesArray,
-    },
-  });
-  revalidatePath('/certificates');
-  revalidatePath('/dashboard');
+  try {
+    const namesArray = data.nama_pemegang.split(',').map(name => name.trim()).filter(name => name.length > 0);
+    await prisma.certificate.update({
+      where: { id },
+      data: {
+        ...data,
+        nama_pemegang: namesArray,
+      },
+    });
+    revalidatePath('/certificates');
+    revalidatePath('/dashboard');
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      throw new Error(`A certificate with number '${data.no_sertifikat}' already exists.`);
+    }
+    throw new Error('An unexpected error occurred while updating the certificate.');
+  }
 }
 
 export async function deleteCertificate(id: string) {
@@ -96,30 +111,53 @@ export async function getUsers() {
 }
 
 export async function addUser(data: UserSubmitData) {
-  const hashedPassword = await bcrypt.hash(data.password!, 10);
-  await prisma.user.create({
-    data: {
-      ...data,
-      password: hashedPassword,
-    },
-  });
-  revalidatePath('/users');
-  revalidatePath('/dashboard');
+  try {
+    if (!data.password) {
+      throw new Error('Password is required for new users.');
+    }
+    const hashedPassword = await bcrypt.hash(data.password, 10);
+    await prisma.user.create({
+      data: {
+        name: data.name,
+        email: data.email,
+        role: data.role,
+        password: hashedPassword,
+      },
+    });
+    revalidatePath('/users');
+    revalidatePath('/dashboard');
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      throw new Error(`A user with email '${data.email}' already exists.`);
+    }
+    throw new Error('An unexpected error occurred while adding the user.');
+  }
 }
 
 export async function updateUser(id: string, data: UserSubmitData) {
-  const updateData: Partial<UserSubmitData> & { password?: string } = { ...data };
-  if (data.password) {
-    updateData.password = await bcrypt.hash(data.password, 10);
-  } else {
-    delete updateData.password;
+  try {
+    const updateData: { name: string; email: string; role: 'admin' | 'user'; password?: string } = {
+      name: data.name,
+      email: data.email,
+      role: data.role,
+    };
+    if (data.password) {
+      updateData.password = await bcrypt.hash(data.password, 10);
+    }
+    
+    await prisma.user.update({
+      where: { id },
+      data: updateData,
+    });
+    revalidatePath('/users');
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      throw new Error(`A user with email '${data.email}' already exists.`);
+    }
+    throw new Error('An unexpected error occurred while updating the user.');
   }
-  await prisma.user.update({
-    where: { id },
-    data: updateData,
-  });
-  revalidatePath('/users');
 }
+
 
 export async function deleteUser(id: string) {
   await prisma.user.delete({ where: { id } });

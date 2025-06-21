@@ -72,7 +72,8 @@ export default function UsersPage() {
       fetchUsers();
     } catch (error) {
       console.error("Failed to delete user:", error);
-      toast({ variant: "destructive", title: "Error", description: `Failed to delete user.` });
+      const errorMessage = error instanceof Error ? error.message : "Failed to delete user.";
+      toast({ variant: "destructive", title: "Error", description: errorMessage });
     }
   }, [toast, fetchUsers]);
 
@@ -87,13 +88,14 @@ export default function UsersPage() {
         toast({ title: "User Added", description: `User ${data.name} has been added.` });
       }
       fetchUsers();
-    } catch (error) {
-      console.error("Failed to save user:", error);
-      toast({ variant: "destructive", title: "Error", description: "A user with this email may already exist." });
-    } finally {
-      setIsSubmitting(false);
       setIsModalOpen(false);
       setEditingUser(undefined);
+    } catch (error) {
+      console.error("Failed to save user:", error);
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+      toast({ variant: "destructive", title: "Save Failed", description: errorMessage });
+    } finally {
+      setIsSubmitting(false);
     }
   }, [editingUser, toast, fetchUsers]);
 
