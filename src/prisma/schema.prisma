@@ -1,0 +1,61 @@
+
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-1.1.x"]
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Certificate {
+  id                  String   @id @default(cuid())
+  kode                String
+  nama_pemegang       Json
+  surat_hak           String
+  no_sertifikat       String   @unique
+  lokasi_tanah        String   @db.Text
+  luas_m2             Int
+  tgl_terbit          DateTime
+  surat_ukur          String
+  nib                 String   @unique
+  pendaftaran_pertama DateTime
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ActivityLog {
+  id        String   @id @default(cuid())
+  user      String
+  action    String
+  details   String   @db.Text
+  timestamp DateTime @default(now())
+}
+
+model TanahGarapanEntry {
+  id                          String  @id @default(cuid())
+  letakTanah                  String
+  namaPemegangHak             String
+  letterC                     String
+  nomorSuratKeteranganGarapan String
+  luas                        Int
+  keterangan                  String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
