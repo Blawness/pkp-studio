@@ -13,7 +13,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { UserCircle, Moon, Sun, LogOutIcon } from "lucide-react"; // Changed LogOut to LogOutIcon to avoid name clash
+import { UserCircle, Moon, Sun, LogOut } from "lucide-react";
 import { Breadcrumbs } from "@/components/shared/Breadcrumbs";
 import { APP_NAME } from "@/lib/constants";
 import { useAuth } from "@/contexts/AuthContext"; 
