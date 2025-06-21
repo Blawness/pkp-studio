@@ -1,17 +1,17 @@
 
 export interface Certificate {
-  id: string; // In DataConnect schema, 'kode' is used as 'id'
+  id: string; 
   kode: string;
-  nama_pemegang: string[]; // Changed from string to string[]
+  nama_pemegang: string[] | any; // Allow 'any' for Prisma Json type
   surat_hak: string;
   no_sertifikat: string;
   lokasi_tanah: string;
   luas_m2: number;
-  tgl_terbit: Date; // Will be string or Timestamp from DataConnect, convert to Date in frontend
+  tgl_terbit: Date; 
   surat_ukur: string;
   nib: string;
-  pendaftaran_pertama: Date; // Will be string or Timestamp from DataConnect
-  actions?: boolean; // Optional: to indicate if actions column should be rendered
+  pendaftaran_pertama: Date;
+  actions?: boolean;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -26,9 +26,9 @@ export interface User {
 
 export interface ActivityLog {
   id: string;
-  user: string; // User who performed the action
-  action: string; // e.g., "Created certificate", "Updated user"
-  details: string; // e.g., "Certificate Kode: C001", "User: John Doe"
+  user: string;
+  action: string;
+  details: string;
   timestamp: Date;
 }
 
@@ -50,18 +50,19 @@ export interface AuthUser {
   id: string;
   email: string;
   name?: string;
-  // Add other relevant user properties
+  role: 'admin' | 'user';
 }
 
 export interface TanahGarapanEntry {
   id: string;
-  letakTanah: string; // e.g., "Blok A Sawah"
+  letakTanah: string;
   namaPemegangHak: string;
   letterC: string;
   nomorSuratKeteranganGarapan: string;
-  luas: number; // in m2
-  keterangan: string | null; // Changed to allow null
+  luas: number;
+  keterangan: string | null;
   createdAt: Date;
+  updatedAt: Date;
 }
 
-export type TanahGarapanFormInput = Omit<TanahGarapanEntry, 'id' | 'createdAt'>;
+export type TanahGarapanFormInput = Omit<TanahGarapanEntry, 'id' | 'createdAt' | 'updatedAt'>;

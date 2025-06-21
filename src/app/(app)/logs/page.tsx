@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
@@ -5,8 +6,8 @@ import { LogTable } from '@/components/logs/LogTable';
 import type { ActivityLog } from '@/lib/types';
 import { Input } from '@/components/ui/input';
 import { Search } from 'lucide-react';
-import prisma from '@/lib/prisma';
 import { useToast } from "@/hooks/use-toast";
+import { getLogs } from '@/lib/actions';
 
 export default function LogsPage() {
   const { toast } = useToast();
@@ -15,7 +16,7 @@ export default function LogsPage() {
 
   const fetchLogs = useCallback(async () => {
     try {
-      const fetchedLogs = await prisma.activityLog.findMany();
+      const fetchedLogs = await getLogs();
       setLogs(fetchedLogs);
     } catch (error) {
       console.error("Failed to fetch activity logs:", error);

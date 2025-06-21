@@ -20,7 +20,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { useToast } from "@/hooks/use-toast";
 import { SURAT_HAK_OPTIONS, KODE_CERTIFICATE_OPTIONS } from '@/lib/constants';
-import prisma from '@/lib/prisma';
+import { getCertificates, addCertificate, updateCertificate, deleteCertificate } from '@/lib/actions';
 
 type SortableCertificateKey = 'kode' | 'nama_pemegang' | 'surat_hak' | 'no_sertifikat' | 'luas_m2' | 'tgl_terbit';
 
@@ -38,8 +38,7 @@ export default function CertificatesPage() {
 
   const fetchCertificates = useCallback(async () => {
     try {
-      const fetchedCertificates = await prisma.certificate.findMany();
-      // Ensure nama_pemegang is treated as string[] even if stored as Json in DB
+      const fetchedCertificates = await getCertificates();
       const formattedCertificates = fetchedCertificates.map(cert => ({
         ...cert,
         nama_pemegang: Array.isArray(cert.nama_pemegang) ? cert.nama_pemegang as string[] : [],
@@ -68,18 +67,15 @@ export default function CertificatesPage() {
   }, []);
 
   const filteredAndSortedCertificates = useMemo(() => {
-    if (!certificates) {
-      return [];
-    }
+    if (!certificates) return [];
     let filtered = certificates.filter(cert =>
       (suratHakFilter === 'all' || cert.surat_hak === suratHakFilter) &&
       (kodeFilter === 'all' || cert.kode === kodeFilter) &&
-      (Object.values(cert).some(value => {
-        if (Array.isArray(value)) {
-          return value.some(name => String(name).toLowerCase().includes(searchTerm.toLowerCase()));
-        }
-        return String(value).toLowerCase().includes(searchTerm.toLowerCase());
-      }))
+      (Object.values(cert).some(value => 
+        Array.isArray(value) 
+          ? value.join(', ').toLowerCase().includes(searchTerm.toLowerCase())
+          : String(value).toLowerCase().includes(searchTerm.toLowerCase())
+      ))
     );
 
     if (sortConfig) {
@@ -90,20 +86,13 @@ export default function CertificatesPage() {
         if (sortConfig.key === 'nama_pemegang') {
           valA = Array.isArray(valA) ? valA[0] || '' : '';
           valB = Array.isArray(valB) ? valB[0] || '' : '';
-        }
-        
-        if (sortConfig.key === 'tgl_terbit') { 
+        } else if (sortConfig.key === 'tgl_terbit') {
             valA = new Date(valA as Date).getTime();
             valB = new Date(valB as Date).getTime();
         }
 
-
-        if (typeof valA === 'string' && typeof valB === 'string') {
-          return sortConfig.direction === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
-        }
-        if (typeof valA === 'number' && typeof valB === 'number') {
-          return sortConfig.direction === 'asc' ? valA - valB : valB - valA;
-        }
+        if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
+        if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
         return 0;
       });
     }
@@ -123,51 +112,37 @@ export default function CertificatesPage() {
   const handleDeleteCertificate = useCallback(async (certificateId: string) => {
     setIsSubmitting(true);
     try {
-      await prisma.certificate.delete({
-        where: { id: certificateId },
-      });
-      toast({ variant: "destructive", title: "Certificate Deleted", description: `Certificate ID ${certificateId} has been removed.` });
-      fetchCertificates(); // Refresh the list
+      await deleteCertificate(certificateId);
+      toast({ variant: "destructive", title: "Certificate Deleted", description: "Certificate has been removed." });
+      // No need to call fetchCertificates, revalidatePath handles it.
     } catch (error) {
       console.error("Failed to delete certificate:", error);
-      toast({ variant: "destructive", title: "Error", description: `Failed to delete certificate ID: ${certificateId}.` });
+      toast({ variant: "destructive", title: "Error", description: "Failed to delete certificate." });
     } finally {
       setIsSubmitting(false);
     }
-  }, [toast, fetchCertificates]);
+  }, [toast]);
 
   const handleFormSubmit = useCallback(async (data: CertificateFormData) => {
     setIsSubmitting(true);
-
-    const namesArray = data.nama_pemegang.split(',').map(name => name.trim()).filter(name => name.length > 0);
-    const certificateData = {
-      ...data,
-      nama_pemegang: namesArray,
-    };
-
     try {
       if (editingCertificate) {
-        await prisma.certificate.update({
-          where: { id: editingCertificate.id },
-          data: certificateData,
-        });
-        toast({ title: "Certificate Updated", description: `Certificate ${data.kode} has been updated.` });
+        await updateCertificate(editingCertificate.id, data);
+        toast({ title: "Certificate Updated", description: "Certificate has been updated." });
       } else {
-        await prisma.certificate.create({
-          data: certificateData,
-        });
-        toast({ title: "Certificate Added", description: `Certificate ${data.kode} has been added.` });
+        await addCertificate(data);
+        toast({ title: "Certificate Added", description: "New certificate has been added." });
       }
-      fetchCertificates(); // Refresh the list after add/update
+      // No need to call fetchCertificates, revalidatePath handles it.
     } catch (error) {
       console.error("Failed to save certificate:", error);
-      toast({ variant: "destructive", title: "Error", description: `Failed to save certificate.` });
+      toast({ variant: "destructive", title: "Error", description: "Failed to save certificate." });
     } finally {
       setIsSubmitting(false);
       setIsModalOpen(false);
       setEditingCertificate(undefined);
     }
-  }, [editingCertificate, toast, fetchCertificates]);
+  }, [editingCertificate, toast]);
   
   if (certificates === null) {
     return (
@@ -175,7 +150,7 @@ export default function CertificatesPage() {
         <h1 className="text-3xl font-headline font-semibold">Certificate Management</h1>
         <div className="rounded-xl border shadow-xs p-4 text-center">
             <p className="text-muted-foreground">Loading certificates...</p>
-          </div>
+        </div>
       </div>
     );
   }
@@ -192,21 +167,14 @@ export default function CertificatesPage() {
           </DialogTrigger>
           <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle className="font-headline">
-                {editingCertificate ? 'Edit Certificate' : 'Add New Certificate'}
-              </DialogTitle>
-              <DialogDescription>
-                {editingCertificate ? 'Update the details of the existing certificate.' : 'Fill in the form to add a new certificate.'}
-              </DialogDescription>
+              <DialogTitle className="font-headline">{editingCertificate ? 'Edit Certificate' : 'Add New Certificate'}</DialogTitle>
+              <DialogDescription>{editingCertificate ? 'Update certificate details.' : 'Fill in the form to add a new certificate.'}</DialogDescription>
             </DialogHeader>
             <CertificateForm
               onSubmit={handleFormSubmit}
               initialData={editingCertificate}
               isSubmitting={isSubmitting}
-              onCancel={() => {
-                setIsModalOpen(false);
-                setEditingCertificate(undefined);
-              }}
+              onCancel={() => { setIsModalOpen(false); setEditingCertificate(undefined); }}
             />
           </DialogContent>
         </Dialog>
@@ -226,28 +194,20 @@ export default function CertificatesPage() {
         <div>
           <Label htmlFor="kodeFilter" className="text-sm font-medium">Filter by Kode</Label>
           <Select value={kodeFilter} onValueChange={setKodeFilter}>
-            <SelectTrigger id="kodeFilter" className="w-full mt-1">
-              <SelectValue placeholder="All Kode" />
-            </SelectTrigger>
+            <SelectTrigger id="kodeFilter" className="w-full mt-1"><SelectValue placeholder="All Kode" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Kode</SelectItem>
-              {KODE_CERTIFICATE_OPTIONS.map(option => (
-                <SelectItem key={option} value={option}>{option}</SelectItem>
-              ))}
+              {KODE_CERTIFICATE_OPTIONS.map(option => <SelectItem key={option} value={option}>{option}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
         <div>
           <Label htmlFor="suratHakFilter" className="text-sm font-medium">Filter by Surat Hak</Label>
           <Select value={suratHakFilter} onValueChange={setSuratHakFilter}>
-            <SelectTrigger id="suratHakFilter" className="w-full mt-1">
-              <SelectValue placeholder="All Surat Hak" />
-            </SelectTrigger>
+            <SelectTrigger id="suratHakFilter" className="w-full mt-1"><SelectValue placeholder="All Surat Hak" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Surat Hak</SelectItem>
-              {SURAT_HAK_OPTIONS.map(option => (
-                <SelectItem key={option} value={option}>{option}</SelectItem>
-              ))}
+              {SURAT_HAK_OPTIONS.map(option => <SelectItem key={option} value={option}>{option}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>

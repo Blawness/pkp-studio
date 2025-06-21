@@ -3,7 +3,7 @@
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { UserTable } from '@/components/users/UserTable';
-import { UserForm } from '@/components/users/UserForm';
+import { UserForm, type UserSubmitData } from '@/components/users/UserForm';
 import type { User } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,13 +17,10 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { useToast } from "@/hooks/use-toast";
-import prisma from '@/lib/prisma';
+import { getUsers, addUser, updateUser, deleteUser } from '@/lib/actions';
 
 export default function UsersPage() {
   const { toast } = useToast();
-  // This is a mock for role-based access. In a real app, this would be handled by authentication.
-  const isAdmin = true; // Assume current user is admin for UI purposes
-
   const [users, setUsers] = useState<User[] | null>(null); 
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -32,12 +29,8 @@ export default function UsersPage() {
 
   const fetchUsers = useCallback(async () => {
     try {
-      const fetchedUsers = await prisma.user.findMany();
-      const formattedUsers: User[] = fetchedUsers.map(user => ({
-        ...user,
-        role: user.role === 'admin' ? 'admin' : 'user', // Ensure role matches the union type
-      }));
-      setUsers(formattedUsers);
+      const fetchedUsers = await getUsers();
+      setUsers(fetchedUsers);
     } catch (error) {
       console.error("Failed to fetch users:", error);
       toast({
@@ -75,55 +68,36 @@ export default function UsersPage() {
   const handleDeleteUser = useCallback(async (userId: string) => {
     setIsSubmitting(true);
     try {
-      await prisma.user.delete({
-        where: { id: userId },
-      });
-      toast({ variant: "destructive", title: "User Deleted", description: `User ID ${userId} has been removed.` });
-      fetchUsers(); // Refresh the list
+      await deleteUser(userId);
+      toast({ variant: "destructive", title: "User Deleted", description: `User has been removed.` });
     } catch (error) {
       console.error("Failed to delete user:", error);
-      toast({ variant: "destructive", title: "Error", description: `Failed to delete user ID: ${userId}.` });
+      toast({ variant: "destructive", title: "Error", description: `Failed to delete user.` });
     } finally {
       setIsSubmitting(false);
     }
-  }, [toast, fetchUsers]);
+  }, [toast]);
 
-  const handleFormSubmit = useCallback(async (data: Omit<User, 'id' | 'createdAt'>) => {
+  const handleFormSubmit = useCallback(async (data: UserSubmitData) => {
     setIsSubmitting(true);
-
     try {
       if (editingUser) {
-        await prisma.user.update({
-          where: { id: editingUser.id },
-          data: data,
-        });
+        await updateUser(editingUser.id, data);
         toast({ title: "User Updated", description: `User ${data.name} has been updated.` });
       } else {
-        await prisma.user.create({
-          data: data,
-        });
+        await addUser(data);
         toast({ title: "User Added", description: `User ${data.name} has been added.` });
       }
-      fetchUsers(); // Refresh the list after add/update
     } catch (error) {
       console.error("Failed to save user:", error);
-      toast({ variant: "destructive", title: "Error", description: `Failed to save user.` });
+      toast({ variant: "destructive", title: "Error", description: "A user with this email may already exist." });
     } finally {
       setIsSubmitting(false);
       setIsModalOpen(false);
       setEditingUser(undefined);
     }
-  }, [editingUser, toast, fetchUsers]);
+  }, [editingUser, toast]);
 
-  if (!isAdmin) {
-    return (
-      <div className="space-y-8">
-        <h1 className="text-3xl font-headline font-semibold">Access Denied</h1>
-        <p>You do not have permission to view this page.</p>
-      </div>
-    );
-  }
-  
   if (users === null) {
     return (
       <div className="space-y-8">
@@ -147,12 +121,8 @@ export default function UsersPage() {
           </DialogTrigger>
           <DialogContent className="sm:max-w-lg">
             <DialogHeader>
-              <DialogTitle className="font-headline">
-                {editingUser ? 'Edit User' : 'Add New User'}
-              </DialogTitle>
-              <DialogDescription>
-                {editingUser ? 'Update the details of the existing user.' : 'Fill in the form to add a new user.'}
-              </DialogDescription>
+              <DialogTitle className="font-headline">{editingUser ? 'Edit User' : 'Add New User'}</DialogTitle>
+              <DialogDescription>{editingUser ? 'Update user details.' : 'Fill in the form to add a new user.'}</DialogDescription>
             </DialogHeader>
             <UserForm
               onSubmit={handleFormSubmit}

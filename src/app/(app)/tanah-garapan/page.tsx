@@ -12,7 +12,6 @@ import {
   DialogTitle,
   DialogDescription,
   DialogTrigger,
-  DialogClose,
 } from '@/components/ui/dialog';
 import {
   Accordion,
@@ -23,7 +22,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { TanahGarapanForm, type TanahGarapanFormData } from '@/components/tanah-garapan/TanahGarapanForm';
 import { useToast } from "@/hooks/use-toast";
-import prisma from '@/lib/prisma';
+import { getTanahGarapanEntries, addTanahGarapanEntry, updateTanahGarapanEntry, deleteTanahGarapanEntry } from '@/lib/actions';
 
 interface GroupedTanahGarapanData {
   [key: string]: {
@@ -42,7 +41,7 @@ export default function TanahGarapanPage() {
 
   const fetchTanahGarapanEntries = useCallback(async () => {
     try {
-      const fetchedEntries = await prisma.tanahGarapanEntry.findMany();
+      const fetchedEntries = await getTanahGarapanEntries();
       setEntries(fetchedEntries);
     } catch (error) {
       console.error("Failed to fetch Tanah Garapan entries:", error);
@@ -68,8 +67,7 @@ export default function TanahGarapanPage() {
       }
       acc[groupKey].totalLuas += entry.luas;
       acc[groupKey].entries.push(entry);
-      // Sort entries within group by createdAt descending (newest first)
-      acc[groupKey].entries.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+      acc[groupKey].entries.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       return acc;
     }, {} as GroupedTanahGarapanData);
   }, [entries]);
@@ -86,54 +84,42 @@ export default function TanahGarapanPage() {
   const handleEditEntry = useCallback((entry: TanahGarapanEntry) => {
     setEditingEntry(entry);
     setIsModalOpen(true);
-    // Optionally open the accordion item where this entry resides
     setActiveAccordionItem(entry.letakTanah);
   }, []);
 
   const handleDeleteEntry = useCallback(async (entryId: string) => {
     setIsSubmitting(true);
     try {
-      await prisma.tanahGarapanEntry.delete({
-        where: { id: entryId },
-      });
-      toast({ variant: "destructive", title: "Data Dihapus", description: `Data tanah garapan ID ${entryId} telah dihapus.` });
-      fetchTanahGarapanEntries(); // Refresh the list
+      await deleteTanahGarapanEntry(entryId);
+      toast({ variant: "destructive", title: "Data Dihapus", description: `Data tanah garapan telah dihapus.` });
     } catch (error) {
       console.error("Failed to delete Tanah Garapan entry:", error);
-      toast({ variant: "destructive", title: "Error", description: `Failed to delete data tanah garapan ID: ${entryId}.` });
+      toast({ variant: "destructive", title: "Error", description: `Gagal menghapus data tanah garapan.` });
     } finally {
       setIsSubmitting(false);
     }
-  }, [toast, fetchTanahGarapanEntries]);
+  }, [toast]);
 
   const handleFormSubmit = useCallback(async (data: TanahGarapanFormData) => {
     setIsSubmitting(true);
-
     try {
       if (editingEntry) {
-        await prisma.tanahGarapanEntry.update({
-          where: { id: editingEntry.id },
-          data: data,
-        });
+        await updateTanahGarapanEntry(editingEntry.id, data);
         toast({ title: "Data Diperbarui", description: `Data untuk ${data.letakTanah} telah diperbarui.` });
       } else {
-        await prisma.tanahGarapanEntry.create({
-          data: data,
-        });
+        await addTanahGarapanEntry(data);
         toast({ title: "Data Ditambahkan", description: `Data baru untuk ${data.letakTanah} telah ditambahkan.` });
-        // Set the active accordion item to the one just added to
         setActiveAccordionItem(data.letakTanah);
       }
-      fetchTanahGarapanEntries(); // Refresh the list after add/update
     } catch (error) {
       console.error("Failed to save Tanah Garapan entry:", error);
-      toast({ variant: "destructive", title: "Error", description: `Failed to save data tanah garapan.` });
+      toast({ variant: "destructive", title: "Error", description: `Gagal menyimpan data.` });
     } finally {
       setIsSubmitting(false);
       setIsModalOpen(false);
       setEditingEntry(undefined);
     }
-  }, [editingEntry, toast, fetchTanahGarapanEntries]);
+  }, [editingEntry, toast]);
 
   if (entries === null) {
     return (
@@ -155,49 +141,32 @@ export default function TanahGarapanPage() {
           </DialogTrigger>
           <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle className="font-headline">
-                {editingEntry ? 'Edit Data Tanah Garapan' : 'Tambah Data Tanah Garapan Baru'}
-              </DialogTitle>
-              <DialogDescription>
-                {editingEntry ? 'Perbarui detail data tanah garapan yang sudah ada.' : 'Isi formulir untuk menambah data tanah garapan baru.'}
-              </DialogDescription>
+              <DialogTitle className="font-headline">{editingEntry ? 'Edit Data' : 'Tambah Data Baru'}</DialogTitle>
+              <DialogDescription>{editingEntry ? 'Perbarui detail data.' : 'Isi formulir untuk menambah data baru.'}</DialogDescription>
             </DialogHeader>
             <TanahGarapanForm
               onSubmit={handleFormSubmit}
               initialData={editingEntry}
               isSubmitting={isSubmitting}
-              onCancel={() => {
-                setIsModalOpen(false);
-                setEditingEntry(undefined);
-              }}
+              onCancel={() => { setIsModalOpen(false); setEditingEntry(undefined); }}
             />
           </DialogContent>
         </Dialog>
       </div>
 
       {Object.keys(groupedData).length === 0 ? (
-         <Card className="mt-4">
-          <CardContent className="p-6 text-center">
+         <Card className="mt-4"><CardContent className="p-6 text-center">
             <p className="text-muted-foreground">Belum ada data tanah garapan.</p>
-            <p className="text-sm text-muted-foreground mt-1">Klik tombol "Tambah Data" untuk memulai.</p>
-          </CardContent>
-        </Card>
+          </CardContent></Card>
       ) : (
-        <Accordion 
-            type="single" 
-            collapsible 
-            className="w-full space-y-2"
-            value={activeAccordionItem}
-            onValueChange={setActiveAccordionItem}
-        >
+        <Accordion type="single" collapsible className="w-full space-y-2" value={activeAccordionItem} onValueChange={setActiveAccordionItem}>
           {sortedGroupKeys.map((groupKey) => (
             <AccordionItem value={groupKey} key={groupKey} className="border rounded-lg shadow-sm bg-card">
               <AccordionTrigger className="px-6 py-4 hover:no-underline">
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between w-full">
                     <span className="font-semibold text-lg">Letak Tanah: {groupKey}</span>
                     <span className="text-sm text-muted-foreground md:ml-4">
-                        Total Luas: {groupedData[groupKey].totalLuas.toLocaleString()} m²
-                        ({groupedData[groupKey].entries.length} entri)
+                        Total Luas: {groupedData[groupKey].totalLuas.toLocaleString()} m² ({groupedData[groupKey].entries.length} entri)
                     </span>
                 </div>
               </AccordionTrigger>
@@ -206,12 +175,8 @@ export default function TanahGarapanPage() {
                   {groupedData[groupKey].entries.map((entry) => (
                     <Card key={entry.id} className="p-4 shadow-sm">
                       <CardHeader className="p-0 mb-2">
-                        <CardTitle className="text-base font-medium">
-                          Pemegang Hak: {entry.namaPemegangHak}
-                        </CardTitle>
-                        <CardDescription className="text-xs">
-                          Ditambahkan: {entry.createdAt.toLocaleDateString()}
-                        </CardDescription>
+                        <CardTitle className="text-base font-medium">Pemegang Hak: {entry.namaPemegangHak}</CardTitle>
+                        <CardDescription className="text-xs">Ditambahkan: {new Date(entry.createdAt).toLocaleDateString()}</CardDescription>
                       </CardHeader>
                       <CardContent className="p-0 text-sm space-y-1">
                         <p><strong>Letter C:</strong> {entry.letterC}</p>
@@ -220,12 +185,8 @@ export default function TanahGarapanPage() {
                         {entry.keterangan && <p><strong>Keterangan:</strong> {entry.keterangan}</p>}
                       </CardContent>
                       <div className="flex justify-end gap-2 mt-3">
-                        <Button variant="outline" size="sm" onClick={() => handleEditEntry(entry)}>
-                          <Edit3 className="mr-1 h-3 w-3" /> Edit
-                        </Button>
-                        <Button variant="destructive" size="sm" onClick={() => handleDeleteEntry(entry.id)}>
-                          <Trash2 className="mr-1 h-3 w-3" /> Hapus
-                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => handleEditEntry(entry)}><Edit3 className="mr-1 h-3 w-3" /> Edit</Button>
+                        <Button variant="destructive" size="sm" onClick={() => handleDeleteEntry(entry.id)}><Trash2 className="mr-1 h-3 w-3" /> Hapus</Button>
                       </div>
                     </Card>
                   ))}

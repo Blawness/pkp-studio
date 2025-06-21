@@ -1,58 +1,54 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+generator client {
+  provider = "prisma-client-js"
+}
 
 datasource db {
   provider = "mysql"
   url      = env("DATABASE_URL")
 }
 
-generator client {
-  provider = "prisma-client-js"
-}
-
-
 model Certificate {
-  id                  String   @id @default(uuid())
-  kode                String   @unique
+  id                  String   @id @default(cuid())
+  kode                String
   nama_pemegang       Json
   surat_hak           String
   no_sertifikat       String   @unique
-  lokasi_tanah        String
-  luas_m2             Float
-  tgl_terbit          DateTime @db.Date
+  lokasi_tanah        String   @db.Text
+  luas_m2             Int
+  tgl_terbit          DateTime
   surat_ukur          String
-  nib                 String
-  pendaftaran_pertama DateTime @db.Date
+  nib                 String   @unique
+  pendaftaran_pertama DateTime
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 }
 
 model User {
-  id        String   @id @default(uuid())
-  name      String
+  id        String   @id @default(cuid())
   email     String   @unique
-  role      String // Consider using an enum if roles are fixed: enum Role { ADMIN USER } @default(USER)
+  name      String
+  password  String   @db.Text
+  role      String   @default("user") // 'admin' or 'user'
   createdAt DateTime @default(now())
 }
 
 model ActivityLog {
-  id        String   @id @default(uuid())
-  user      String // User's name or ID. Consider relation to User model if full user details are needed.
+  id        String   @id @default(cuid())
+  user      String
   action    String
-  details   String
+  details   String   @db.Text
   timestamp DateTime @default(now())
 }
 
 model TanahGarapanEntry {
-  id                          String   @id @default(uuid())
+  id                          String    @id @default(cuid())
   letakTanah                  String
   namaPemegangHak             String
   letterC                     String
-  nomorSuratKeteranganGarapan String   @unique
-  luas                        Float
-  keterangan                  String?
-  createdAt                   DateTime @default(now())
+  nomorSuratKeteranganGarapan String
+  luas                        Int
+  keterangan                  String?   @db.Text
+  createdAt                   DateTime  @default(now())
+  updatedAt                   DateTime  @updatedAt
 }
