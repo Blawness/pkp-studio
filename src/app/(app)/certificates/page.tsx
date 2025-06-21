@@ -1,14 +1,14 @@
 
 "use client";
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { CertificateTable } from '@/components/certificates/CertificateTable';
 import { CertificateForm, type CertificateFormData } from '@/components/certificates/CertificateForm';
 import type { Certificate } from '@/lib/types';
 import { mockCertificates } from '@/lib/mockData';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, PlusCircle, RefreshCw } from 'lucide-react';
+import { Search, PlusCircle } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -27,12 +27,7 @@ type SortableCertificateKey = 'kode' | 'nama_pemegang' | 'surat_hak' | 'no_serti
 export default function CertificatesPage() {
   const { toast } = useToast();
   
-  const { data: certificatesData, isLoading, error, refetch } = useListCertificatesQuery({});
-  
-  const createCertificateMutation = useCreateCertificateMutation();
-  const updateCertificateMutation = useUpdateCertificateMutation();
-  const deleteCertificateMutation = useDeleteCertificateMutation();
-
+  const [certificates, setCertificates] = useState<Certificate[] | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [suratHakFilter, setSuratHakFilter] = useState<string>('all');
   const [kodeFilter, setKodeFilter] = useState<string>('all');
@@ -100,7 +95,7 @@ export default function CertificatesPage() {
     setIsModalOpen(true);
   }, []);
 
-  const handleEditCertificate = useCallback((certificate: DisplayCertificate) => {
+  const handleEditCertificate = useCallback((certificate: Certificate) => {
     setEditingCertificate(certificate);
     setIsModalOpen(true);
   }, []);
@@ -143,24 +138,6 @@ export default function CertificatesPage() {
     setEditingCertificate(undefined);
   }, [editingCertificate, toast]);
   
-  if (isLoading) {
-    return (
-      <div className="flex flex-col flex-1 space-y-8 items-center justify-center">
-        <RefreshCw className="mr-2 h-8 w-8 animate-spin text-primary" />
-        <p>Loading certificates...</p>
-      </div>
-    );
-  }
-
-  if (error) {
-     return (
-      <div className="flex flex-col flex-1 space-y-8 items-center justify-center text-destructive">
-        <p>Error loading certificates: {error.message}</p>
-        <Button onClick={() => refetch()}>Try Again</Button>
-      </div>
-    );
-  }
-
   return (
     <div className="flex flex-col flex-1 space-y-8">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
