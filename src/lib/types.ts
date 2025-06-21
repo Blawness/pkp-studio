@@ -62,7 +62,6 @@ export interface TanahGarapanEntry {
   luas: number;
   keterangan: string | null;
   createdAt: Date;
-  updatedAt: Date;
 }
 
 export type TanahGarapanFormInput = Omit<TanahGarapanEntry, 'id' | 'createdAt' | 'updatedAt'>;
