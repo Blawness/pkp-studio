@@ -45,10 +45,6 @@ export default function DashboardPage() {
 
   const logsCount = mockActivityLogs.length;
 
-  const certificatesCount = useMemo(() => {
-    return certificatesData?.listCertificates?.length ?? 0;
-  }, [certificatesData]);
-
   useEffect(() => {
     const loadedCertificates = mockCertificates;
     setCertificates(loadedCertificates);
