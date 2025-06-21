@@ -78,6 +78,14 @@ export async function addCertificate(data: CertificateFormData) {
 }
 
 export async function updateCertificate(id: string, data: CertificateFormData) {
+  const existing = await prisma.certificate.findUnique({
+    where: { no_sertifikat: data.no_sertifikat },
+  });
+
+  if (existing && existing.id !== id) {
+    throw new Error(`A certificate with number '${data.no_sertifikat}' already exists.`);
+  }
+
   try {
     const namesArray = data.nama_pemegang.split(',').map(name => name.trim()).filter(name => name.length > 0);
     await prisma.certificate.update({
@@ -90,9 +98,7 @@ export async function updateCertificate(id: string, data: CertificateFormData) {
     revalidatePath('/certificates');
     revalidatePath('/dashboard');
   } catch (error) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-      throw new Error(`A certificate with number '${data.no_sertifikat}' already exists.`);
-    }
+    console.error("Update Certificate Error:", error);
     throw new Error('An unexpected error occurred while updating the certificate.');
   }
 }
@@ -135,6 +141,14 @@ export async function addUser(data: UserSubmitData) {
 }
 
 export async function updateUser(id: string, data: UserSubmitData) {
+  const existingUser = await prisma.user.findUnique({
+    where: { email: data.email },
+  });
+
+  if (existingUser && existingUser.id !== id) {
+    throw new Error(`A user with email '${data.email}' already exists.`);
+  }
+
   try {
     const updateData: { name: string; email: string; role: 'admin' | 'user'; password?: string } = {
       name: data.name,
@@ -151,9 +165,7 @@ export async function updateUser(id: string, data: UserSubmitData) {
     });
     revalidatePath('/users');
   } catch (error) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-      throw new Error(`A user with email '${data.email}' already exists.`);
-    }
+    console.error("Update User Error:", error);
     throw new Error('An unexpected error occurred while updating the user.');
   }
 }
