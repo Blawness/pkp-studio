@@ -1,23 +1,56 @@
 "use client";
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { LogTable } from '@/components/logs/LogTable';
 import type { ActivityLog } from '@/lib/types';
-import { mockActivityLogs } from '@/lib/mockData';
 import { Input } from '@/components/ui/input';
 import { Search } from 'lucide-react';
+import prisma from '@/lib/prisma';
+import { useToast } from "@/hooks/use-toast";
 
 export default function LogsPage() {
-  const [logs] = useState<ActivityLog[]>(mockActivityLogs); // Using mock data directly
+  const { toast } = useToast();
+  const [logs, setLogs] = useState<ActivityLog[] | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
+  const fetchLogs = useCallback(async () => {
+    try {
+      const fetchedLogs = await prisma.activityLog.findMany();
+      setLogs(fetchedLogs);
+    } catch (error) {
+      console.error("Failed to fetch activity logs:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load activity logs.",
+        variant: "destructive",
+      });
+      setLogs([]);
+    }
+  }, [toast]);
+
+  useEffect(() => {
+    fetchLogs();
+  }, [fetchLogs]);
+
   const filteredLogs = useMemo(() => {
+    if (!logs) return [];
     return logs.filter(log =>
       log.user.toLowerCase().includes(searchTerm.toLowerCase()) ||
       log.action.toLowerCase().includes(searchTerm.toLowerCase()) ||
       log.details.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [logs, searchTerm]);
+
+  if (logs === null) {
+    return (
+      <div className="space-y-8">
+        <h1 className="text-3xl font-headline font-semibold">Activity Logs</h1>
+        <div className="rounded-xl border shadow-xs p-4 text-center">
+          <p className="text-muted-foreground">Loading activity logs...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">

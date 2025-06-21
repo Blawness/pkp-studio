@@ -60,6 +60,8 @@ export interface TanahGarapanEntry {
   letterC: string;
   nomorSuratKeteranganGarapan: string;
   luas: number; // in m2
-  keterangan?: string;
+  keterangan: string | null; // Changed to allow null
   createdAt: Date;
 }
+
+export type TanahGarapanFormInput = Omit<TanahGarapanEntry, 'id' | 'createdAt'>;

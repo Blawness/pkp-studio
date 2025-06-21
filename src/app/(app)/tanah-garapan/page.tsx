@@ -2,8 +2,7 @@
 "use client";
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import type { TanahGarapanEntry, TanahGarapanEntry as TanahGarapanEntryType } from '@/lib/types';
-import { mockTanahGarapanData } from '@/lib/mockData';
+import type { TanahGarapanEntry } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, Edit3, Trash2 } from 'lucide-react';
 import {
@@ -22,29 +21,43 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { TanahGarapanForm } from '@/components/tanah-garapan/TanahGarapanForm';
+import { TanahGarapanForm, type TanahGarapanFormData } from '@/components/tanah-garapan/TanahGarapanForm';
 import { useToast } from "@/hooks/use-toast";
+import prisma from '@/lib/prisma';
 
 interface GroupedTanahGarapanData {
   [key: string]: {
     totalLuas: number;
-    entries: TanahGarapanEntryType[];
+    entries: TanahGarapanEntry[];
   };
 }
 
 export default function TanahGarapanPage() {
   const { toast } = useToast();
-  const [entries, setEntries] = useState<TanahGarapanEntryType[] | null>(null);
+  const [entries, setEntries] = useState<TanahGarapanEntry[] | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingEntry, setEditingEntry] = useState<TanahGarapanEntryType | undefined>(undefined);
+  const [editingEntry, setEditingEntry] = useState<TanahGarapanEntry | undefined>(undefined);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeAccordionItem, setActiveAccordionItem] = useState<string | undefined>(undefined);
 
+  const fetchTanahGarapanEntries = useCallback(async () => {
+    try {
+      const fetchedEntries = await prisma.tanahGarapanEntry.findMany();
+      setEntries(fetchedEntries);
+    } catch (error) {
+      console.error("Failed to fetch Tanah Garapan entries:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load Tanah Garapan data.",
+        variant: "destructive",
+      });
+      setEntries([]);
+    }
+  }, [toast]);
 
   useEffect(() => {
-    // Load mock data on client side
-    setEntries(mockTanahGarapanData);
-  }, []);
+    fetchTanahGarapanEntries();
+  }, [fetchTanahGarapanEntries]);
 
   const groupedData: GroupedTanahGarapanData = useMemo(() => {
     if (!entries) return {};
@@ -70,46 +83,57 @@ export default function TanahGarapanPage() {
     setIsModalOpen(true);
   }, []);
 
-  const handleEditEntry = useCallback((entry: TanahGarapanEntryType) => {
+  const handleEditEntry = useCallback((entry: TanahGarapanEntry) => {
     setEditingEntry(entry);
     setIsModalOpen(true);
     // Optionally open the accordion item where this entry resides
     setActiveAccordionItem(entry.letakTanah);
   }, []);
 
-  const handleDeleteEntry = useCallback((entryId: string) => {
-    setEntries(prev => prev ? prev.filter(entry => entry.id !== entryId) : null);
-    toast({ variant: "destructive", title: "Data Dihapus", description: `Data tanah garapan ID ${entryId} telah dihapus.` });
-  }, [toast]);
-
-  const handleFormSubmit = useCallback(async (data: any) => {
+  const handleDeleteEntry = useCallback(async (entryId: string) => {
     setIsSubmitting(true);
-    await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
+    try {
+      await prisma.tanahGarapanEntry.delete({
+        where: { id: entryId },
+      });
+      toast({ variant: "destructive", title: "Data Dihapus", description: `Data tanah garapan ID ${entryId} telah dihapus.` });
+      fetchTanahGarapanEntries(); // Refresh the list
+    } catch (error) {
+      console.error("Failed to delete Tanah Garapan entry:", error);
+      toast({ variant: "destructive", title: "Error", description: `Failed to delete data tanah garapan ID: ${entryId}.` });
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [toast, fetchTanahGarapanEntries]);
 
-    setEntries(prevEntries => {
-      const currentEntries = prevEntries || [];
+  const handleFormSubmit = useCallback(async (data: TanahGarapanFormData) => {
+    setIsSubmitting(true);
+
+    try {
       if (editingEntry) {
+        await prisma.tanahGarapanEntry.update({
+          where: { id: editingEntry.id },
+          data: data,
+        });
         toast({ title: "Data Diperbarui", description: `Data untuk ${data.letakTanah} telah diperbarui.` });
-        return currentEntries.map(entry =>
-          entry.id === editingEntry.id ? { ...editingEntry, ...data } : entry
-        );
       } else {
-        const newEntry: TanahGarapanEntryType = {
-          ...data,
-          id: `tg-${Date.now()}`,
-          createdAt: new Date(),
-        };
+        await prisma.tanahGarapanEntry.create({
+          data: data,
+        });
         toast({ title: "Data Ditambahkan", description: `Data baru untuk ${data.letakTanah} telah ditambahkan.` });
         // Set the active accordion item to the one just added to
-        setActiveAccordionItem(newEntry.letakTanah);
-        return [newEntry, ...currentEntries];
+        setActiveAccordionItem(data.letakTanah);
       }
-    });
-
-    setIsSubmitting(false);
-    setIsModalOpen(false);
-    setEditingEntry(undefined);
-  }, [editingEntry, toast]);
+      fetchTanahGarapanEntries(); // Refresh the list after add/update
+    } catch (error) {
+      console.error("Failed to save Tanah Garapan entry:", error);
+      toast({ variant: "destructive", title: "Error", description: `Failed to save data tanah garapan.` });
+    } finally {
+      setIsSubmitting(false);
+      setIsModalOpen(false);
+      setEditingEntry(undefined);
+    }
+  }, [editingEntry, toast, fetchTanahGarapanEntries]);
 
   if (entries === null) {
     return (

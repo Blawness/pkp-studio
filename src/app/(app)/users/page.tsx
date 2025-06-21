@@ -1,11 +1,10 @@
 
 "use client";
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { UserTable } from '@/components/users/UserTable';
 import { UserForm } from '@/components/users/UserForm';
 import type { User } from '@/lib/types';
-import { mockUsers } from '@/lib/mockData';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Search, PlusCircle } from 'lucide-react';
@@ -18,24 +17,44 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { useToast } from "@/hooks/use-toast";
+import prisma from '@/lib/prisma';
 
 export default function UsersPage() {
   const { toast } = useToast();
   // This is a mock for role-based access. In a real app, this would be handled by authentication.
   const isAdmin = true; // Assume current user is admin for UI purposes
 
-  const [users, setUsers] = useState<User[]>([]); // Initialize with empty array
+  const [users, setUsers] = useState<User[] | null>(null); 
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | undefined>(undefined);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const fetchUsers = useCallback(async () => {
+    try {
+      const fetchedUsers = await prisma.user.findMany();
+      const formattedUsers: User[] = fetchedUsers.map(user => ({
+        ...user,
+        role: user.role === 'admin' ? 'admin' : 'user', // Ensure role matches the union type
+      }));
+      setUsers(formattedUsers);
+    } catch (error) {
+      console.error("Failed to fetch users:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load users.",
+        variant: "destructive",
+      });
+      setUsers([]);
+    }
+  }, [toast]);
+
   useEffect(() => {
-    // Load mock users on the client side to avoid hydration mismatch
-    setUsers(mockUsers);
-  }, []);
+    fetchUsers();
+  }, [fetchUsers]);
 
   const filteredUsers = useMemo(() => {
+    if (!users) return [];
     return users.filter(user =>
       user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -53,32 +72,48 @@ export default function UsersPage() {
     setIsModalOpen(true);
   };
 
-  const handleDeleteUser = (userId: string) => {
-    // Mock deletion
-    setUsers(prev => prev.filter(user => user.id !== userId));
-    toast({ variant: "destructive", title: "User Deleted", description: `User ID ${userId} has been removed.` });
-  };
-
-  const handleFormSubmit = async (data: any) => {
+  const handleDeleteUser = useCallback(async (userId: string) => {
     setIsSubmitting(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    if (editingUser) {
-      // Mock update
-      setUsers(prev => prev.map(user => user.id === editingUser.id ? { ...user, ...data, id: user.id, createdAt: user.createdAt } : user));
-      toast({ title: "User Updated", description: `User ${data.name} has been updated.` });
-    } else {
-      // Mock add
-      // For new users, ensure createdAt is a new Date object created on the client
-      const newUser: User = { ...data, id: `user-${Date.now()}`, createdAt: new Date() };
-      setUsers(prev => [newUser, ...prev]);
-      toast({ title: "User Added", description: `User ${data.name} has been added.` });
+    try {
+      await prisma.user.delete({
+        where: { id: userId },
+      });
+      toast({ variant: "destructive", title: "User Deleted", description: `User ID ${userId} has been removed.` });
+      fetchUsers(); // Refresh the list
+    } catch (error) {
+      console.error("Failed to delete user:", error);
+      toast({ variant: "destructive", title: "Error", description: `Failed to delete user ID: ${userId}.` });
+    } finally {
+      setIsSubmitting(false);
     }
-    setIsSubmitting(false);
-    setIsModalOpen(false);
-    setEditingUser(undefined);
-  };
+  }, [toast, fetchUsers]);
+
+  const handleFormSubmit = useCallback(async (data: Omit<User, 'id' | 'createdAt'>) => {
+    setIsSubmitting(true);
+
+    try {
+      if (editingUser) {
+        await prisma.user.update({
+          where: { id: editingUser.id },
+          data: data,
+        });
+        toast({ title: "User Updated", description: `User ${data.name} has been updated.` });
+      } else {
+        await prisma.user.create({
+          data: data,
+        });
+        toast({ title: "User Added", description: `User ${data.name} has been added.` });
+      }
+      fetchUsers(); // Refresh the list after add/update
+    } catch (error) {
+      console.error("Failed to save user:", error);
+      toast({ variant: "destructive", title: "Error", description: `Failed to save user.` });
+    } finally {
+      setIsSubmitting(false);
+      setIsModalOpen(false);
+      setEditingUser(undefined);
+    }
+  }, [editingUser, toast, fetchUsers]);
 
   if (!isAdmin) {
     return (
@@ -89,11 +124,16 @@ export default function UsersPage() {
     );
   }
   
-  // Optional: Add a loading state if users haven't loaded yet, though table will just show "No users found"
-  if (users.length === 0 && searchTerm === '') { // Check searchTerm to differentiate between loading and no results
-     // A simple loading indicator, or return UserTable with users=[] which shows "No users found."
+  if (users === null) {
+    return (
+      <div className="space-y-8">
+        <h1 className="text-3xl font-headline font-semibold">User Management</h1>
+        <div className="rounded-xl border shadow-xs p-4 text-center">
+          <p className="text-muted-foreground">Loading users...</p>
+        </div>
+      </div>
+    );
   }
-
 
   return (
     <div className="space-y-8">

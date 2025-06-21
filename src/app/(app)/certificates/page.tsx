@@ -5,7 +5,6 @@ import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { CertificateTable } from '@/components/certificates/CertificateTable';
 import { CertificateForm, type CertificateFormData } from '@/components/certificates/CertificateForm';
 import type { Certificate } from '@/lib/types';
-import { mockCertificates } from '@/lib/mockData';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Search, PlusCircle } from 'lucide-react';
@@ -21,6 +20,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { useToast } from "@/hooks/use-toast";
 import { SURAT_HAK_OPTIONS, KODE_CERTIFICATE_OPTIONS } from '@/lib/constants';
+import prisma from '@/lib/prisma';
 
 type SortableCertificateKey = 'kode' | 'nama_pemegang' | 'surat_hak' | 'no_sertifikat' | 'luas_m2' | 'tgl_terbit';
 
@@ -36,9 +36,29 @@ export default function CertificatesPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [sortConfig, setSortConfig] = useState<{ key: SortableCertificateKey; direction: 'asc' | 'desc' } | null>(null);
 
+  const fetchCertificates = useCallback(async () => {
+    try {
+      const fetchedCertificates = await prisma.certificate.findMany();
+      // Ensure nama_pemegang is treated as string[] even if stored as Json in DB
+      const formattedCertificates = fetchedCertificates.map(cert => ({
+        ...cert,
+        nama_pemegang: Array.isArray(cert.nama_pemegang) ? cert.nama_pemegang as string[] : [],
+      }));
+      setCertificates(formattedCertificates);
+    } catch (error) {
+      console.error("Failed to fetch certificates:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load certificates.",
+        variant: "destructive",
+      });
+      setCertificates([]);
+    }
+  }, [toast]);
+
   useEffect(() => {
-    setCertificates(mockCertificates);
-  }, []);
+    fetchCertificates();
+  }, [fetchCertificates]);
 
   const handleSort = useCallback((key: SortableCertificateKey) => {
     setSortConfig(prevSortConfig => {
@@ -64,8 +84,8 @@ export default function CertificatesPage() {
 
     if (sortConfig) {
       filtered.sort((a, b) => {
-        let valA = a[sortConfig.key];
-        let valB = b[sortConfig.key];
+        let valA: any = a[sortConfig.key];
+        let valB: any = b[sortConfig.key];
 
         if (sortConfig.key === 'nama_pemegang') {
           valA = Array.isArray(valA) ? valA[0] || '' : '';
@@ -100,44 +120,66 @@ export default function CertificatesPage() {
     setIsModalOpen(true);
   }, []);
 
-  const handleDeleteCertificate = useCallback((certificateId: string) => {
-    setCertificates(prev => prev ? prev.filter(cert => cert.id !== certificateId) : null);
-    toast({ variant: "destructive", title: "Certificate Deleted", description: `Certificate ID ${certificateId} has been removed.` });
-  }, [toast]);
+  const handleDeleteCertificate = useCallback(async (certificateId: string) => {
+    setIsSubmitting(true);
+    try {
+      await prisma.certificate.delete({
+        where: { id: certificateId },
+      });
+      toast({ variant: "destructive", title: "Certificate Deleted", description: `Certificate ID ${certificateId} has been removed.` });
+      fetchCertificates(); // Refresh the list
+    } catch (error) {
+      console.error("Failed to delete certificate:", error);
+      toast({ variant: "destructive", title: "Error", description: `Failed to delete certificate ID: ${certificateId}.` });
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [toast, fetchCertificates]);
 
   const handleFormSubmit = useCallback(async (data: CertificateFormData) => {
     setIsSubmitting(true);
-    await new Promise(resolve => setTimeout(resolve, 1000)); 
 
     const namesArray = data.nama_pemegang.split(',').map(name => name.trim()).filter(name => name.length > 0);
+    const certificateData = {
+      ...data,
+      nama_pemegang: namesArray,
+    };
 
-    setCertificates(prevCertificates => {
-      const currentCertificates = prevCertificates || [];
+    try {
       if (editingCertificate) {
+        await prisma.certificate.update({
+          where: { id: editingCertificate.id },
+          data: certificateData,
+        });
         toast({ title: "Certificate Updated", description: `Certificate ${data.kode} has been updated.` });
-        return currentCertificates.map(cert => 
-          cert.id === editingCertificate.id 
-            ? { ...cert, ...data, nama_pemegang: namesArray, id: cert.id, tgl_terbit: data.tgl_terbit, pendaftaran_pertama: data.pendaftaran_pertama } 
-            : cert
-        );
       } else {
-        const newCertificate: Certificate = { 
-          ...data, 
-          id: `cert-${Date.now()}`, 
-          nama_pemegang: namesArray,
-          tgl_terbit: data.tgl_terbit,
-          pendaftaran_pertama: data.pendaftaran_pertama
-        };
+        await prisma.certificate.create({
+          data: certificateData,
+        });
         toast({ title: "Certificate Added", description: `Certificate ${data.kode} has been added.` });
-        return [newCertificate, ...currentCertificates];
       }
-    });
-
-    setIsSubmitting(false);
-    setIsModalOpen(false);
-    setEditingCertificate(undefined);
-  }, [editingCertificate, toast]);
+      fetchCertificates(); // Refresh the list after add/update
+    } catch (error) {
+      console.error("Failed to save certificate:", error);
+      toast({ variant: "destructive", title: "Error", description: `Failed to save certificate.` });
+    } finally {
+      setIsSubmitting(false);
+      setIsModalOpen(false);
+      setEditingCertificate(undefined);
+    }
+  }, [editingCertificate, toast, fetchCertificates]);
   
+  if (certificates === null) {
+    return (
+      <div className="flex flex-col flex-1 space-y-8">
+        <h1 className="text-3xl font-headline font-semibold">Certificate Management</h1>
+        <div className="rounded-xl border shadow-xs p-4 text-center">
+            <p className="text-muted-foreground">Loading certificates...</p>
+          </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col flex-1 space-y-8">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">

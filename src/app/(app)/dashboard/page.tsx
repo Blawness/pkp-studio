@@ -4,8 +4,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { CertificateTable } from '@/components/certificates/CertificateTable';
-import type { Certificate, StatCardData, User } from '@/lib/types';
-import { mockCertificates, mockUsers, mockActivityLogs } from '@/lib/mockData';
+import type { Certificate, StatCardData, User, ActivityLog } from '@/lib/types';
 import { BarChart3, UsersRound, ListChecks, PieChart as PieChartIcon } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -19,6 +18,7 @@ import {
 } from "@/components/ui/chart";
 import { PieChart, Pie, Cell, Tooltip as RechartsTooltip } from 'recharts';
 import { SURAT_HAK_OPTIONS, USER_ROLE_OPTIONS } from '@/lib/constants';
+import prisma from '@/lib/prisma'; // Import Prisma client
 
 type SortableCertificateKey = 'kode' | 'nama_pemegang' | 'surat_hak' | 'no_sertifikat' | 'luas_m2' | 'tgl_terbit';
 
@@ -38,23 +38,57 @@ const CHART_COLORS = [
 export default function DashboardPage() {
   const { toast } = useToast();
   const [certificates, setCertificates] = useState<Certificate[] | null>(null);
-  const [users, setUsers] = useState<User[]>(mockUsers); // Already loaded
+  const [users, setUsers] = useState<User[] | null>(null);
+  const [activityLogs, setActivityLogs] = useState<ActivityLog[] | null>(null);
   const [recentCertificates, setRecentCertificates] = useState<Certificate[]>([]);
   const [sortConfig, setSortConfig] = useState<{ key: SortableCertificateKey; direction: 'asc' | 'desc' } | null>(null);
 
 
-  const logsCount = mockActivityLogs.length;
-
   useEffect(() => {
-    const loadedCertificates = mockCertificates;
-    setCertificates(loadedCertificates);
-    setRecentCertificates(
-      loadedCertificates
-        .sort((a,b) => new Date(b.tgl_terbit).getTime() - new Date(a.tgl_terbit).getTime()) // Sort by date to get recent
-        .slice(0, 5)
-        .map(cert => ({ ...cert, actions: false }))
-    );
-  }, []); 
+    async function fetchData() {
+      try {
+        const [fetchedCertificates, fetchedUsers, fetchedActivityLogs] = await Promise.all([
+          prisma.certificate.findMany(),
+          prisma.user.findMany(),
+          prisma.activityLog.findMany(),
+        ]);
+
+        const formattedCertificates: Certificate[] = fetchedCertificates.map(cert => ({
+          ...cert,
+          nama_pemegang: Array.isArray(cert.nama_pemegang) ? cert.nama_pemegang as string[] : [],
+        }));
+
+        const formattedUsers: User[] = fetchedUsers.map(user => ({
+          ...user,
+          role: user.role === 'admin' ? 'admin' : 'user', // Ensure role matches the union type
+        }));
+        
+        setCertificates(formattedCertificates);
+        setUsers(formattedUsers);
+        setActivityLogs(fetchedActivityLogs);
+
+        setRecentCertificates(
+          formattedCertificates
+            .sort((a,b) => new Date(b.tgl_terbit).getTime() - new Date(a.tgl_terbit).getTime()) // Sort by date to get recent
+            .slice(0, 5)
+            // .map(cert => ({ ...cert, actions: false })) // Ensure 'actions' property is handled if needed in CertificateTable
+        );
+      } catch (error) {
+        console.error("Failed to fetch data:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load dashboard data.",
+          variant: "destructive",
+        });
+        setCertificates([]); // Set to empty array on error to show "No data"
+        setUsers([]);
+        setActivityLogs([]);
+      }
+    }
+    fetchData();
+  }, [toast]); 
+
+  const logsCount = activityLogs ? activityLogs.length : 0;
 
   const handleSort = useCallback((key: SortableCertificateKey) => {
     setSortConfig(prevSortConfig => {
@@ -65,14 +99,14 @@ export default function DashboardPage() {
         const sorted = [...prev];
         if (key && sortConfig) { // check if sortConfig is not null
              sorted.sort((a, b) => {
-                let valA = a[key];
-                let valB = b[key];
+                let valA: any = a[key];
+                let valB: any = b[key];
 
                 if (key === 'nama_pemegang') {
                     valA = Array.isArray(valA) ? valA[0] || '' : '';
                     valB = Array.isArray(valB) ? valB[0] || '' : '';
                 }
-                if (key === 'tgl_terbit') { // No need for pendaftaran_pertama here
+                if (key === 'tgl_terbit') { 
                     valA = new Date(valA as Date).getTime();
                     valB = new Date(valB as Date).getTime();
                 }
@@ -88,12 +122,12 @@ export default function DashboardPage() {
         }
         return sorted;
     });
-  }, [sortConfig]); // Added sortConfig to dependencies
+  }, [sortConfig]); 
 
 
   const statCardsData: StatCardData[] = [
     { title: 'Total Certificates', value: certificates ? certificates.length : 0, icon: BarChart3, description: 'Number of active certificates' },
-    { title: 'Total Users', value: users.length, icon: UsersRound, description: 'Registered users in the system' },
+    { title: 'Total Users', value: users ? users.length : 0, icon: UsersRound, description: 'Registered users in the system' },
     { title: 'Total Logs', value: logsCount, icon: ListChecks, description: 'Recorded activities' },
   ];
 
@@ -120,6 +154,7 @@ export default function DashboardPage() {
 
 
   const userRoleData = useMemo(() => {
+    if (!users) return [];
     const counts = users.reduce((acc, user) => {
       acc[user.role] = (acc[user.role] || 0) + 1;
       return acc;
@@ -149,7 +184,7 @@ export default function DashboardPage() {
      toast({ variant: "destructive", title: "Delete Action (Mock)", description: `Deleting certificate ID: ${certificateId}` });
   };
 
-  if (certificates === null) {
+  if (certificates === null || users === null || activityLogs === null) {
     return (
       <div className="space-y-8">
         <h1 className="text-3xl font-headline font-semibold">Dashboard</h1>

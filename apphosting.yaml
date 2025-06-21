@@ -5,8 +5,3 @@ runConfig:
   # Increase this value if you'd like to automatically spin up
   # more instances in response to increased traffic.
   maxInstances: 1
-  env:
-    - variable: DB_USER
-      value: admin_pkp
-    - variable: DB_PASSWORD
-      value: "rLK@>4e6Pc4_BMmJ"
