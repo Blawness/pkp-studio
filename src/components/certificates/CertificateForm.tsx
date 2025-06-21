@@ -11,16 +11,19 @@ import { Textarea } from '@/components/ui/textarea';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import type { CertificateCreateInput, CertificateUpdateInput } from '@firebasegen/default-connector'; // Use generated types
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import type { Certificate } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
-import type { DisplayCertificate } from '@/app/(app)/certificates/page'; // Import DisplayCertificate
+import type { Timestamp } from 'firebase-admin/firestore';
+import { KODE_CERTIFICATE_OPTIONS, SURAT_HAK_OPTIONS } from '@/lib/constants';
+
 
 const certificateSchema = z.object({
-  kode: z.string().min(1, "Kode is required"),
-  nama_pemegang: z.string().min(1, "Nama Pemegang is required"),
-  surat_hak: z.string().min(1, "Surat Hak is required"),
+  kode: z.enum(KODE_CERTIFICATE_OPTIONS, { required_error: "Kode is required" }),
+  nama_pemegang: z.string().min(1, "Nama Pemegang is required (comma-separated for multiple names)"),
+  surat_hak: z.enum(SURAT_HAK_OPTIONS, { required_error: "Surat Hak is required" }),
   no_sertifikat: z.string().min(1, "No Sertifikat is required"),
   lokasi_tanah: z.string().min(1, "Lokasi Tanah is required"),
   luas_m2: z.coerce.number().int().positive("Luas M2 must be a positive number"),
@@ -30,49 +33,54 @@ const certificateSchema = z.object({
   pendaftaran_pertama: z.date({ required_error: "Pendaftaran Pertama is required" }),
 });
 
-// This form data type is for internal form state
-type CertificateFormData = z.infer<typeof certificateSchema>;
+export type CertificateFormData = z.infer<typeof certificateSchema>;
+
+export interface CertificateMutationInput {
+  kode: typeof KODE_CERTIFICATE_OPTIONS[number];
+  nama_pemegang: string[]; 
+  surat_hak: typeof SURAT_HAK_OPTIONS[number];
+  no_sertifikat: string;
+  lokasi_tanah: string;
+  luas_m2: number;
+  tgl_terbit: Date | Timestamp | string; 
+  surat_ukur: string;
+  nib: string;
+  pendaftaran_pertama: Date | Timestamp | string; 
+  id?: string; 
+}
+
 
 interface CertificateFormProps {
-  onSubmit: (data: CertificateCreateInput | Omit<CertificateUpdateInput, 'kode'>) => void;
-  initialData?: DisplayCertificate; // Use DisplayCertificate for initialData consistency
+  onSubmit: (data: CertificateFormData) => void; 
+  initialData?: Partial<Certificate>; 
   isSubmitting?: boolean;
-  onCancel: () => void; // Add onCancel prop
+  onCancel?: () => void;
 }
 
 export function CertificateForm({ onSubmit, initialData, isSubmitting, onCancel }: CertificateFormProps) {
+  const currentYear = new Date().getFullYear();
   const form = useForm<CertificateFormData>({
     resolver: zodResolver(certificateSchema),
     defaultValues: {
-      kode: initialData?.kode || '',
-      nama_pemegang: initialData?.nama_pemegang || '',
-      surat_hak: initialData?.surat_hak || '',
+      kode: initialData?.kode ? (KODE_CERTIFICATE_OPTIONS.includes(initialData.kode as any) ? initialData.kode as typeof KODE_CERTIFICATE_OPTIONS[number] : undefined) : undefined,
+      nama_pemegang: initialData?.nama_pemegang && Array.isArray(initialData.nama_pemegang) ? initialData.nama_pemegang.join(', ') : '',
+      surat_hak: initialData?.surat_hak ? (SURAT_HAK_OPTIONS.includes(initialData.surat_hak as any) ? initialData.surat_hak as typeof SURAT_HAK_OPTIONS[number] : undefined) : undefined,
       no_sertifikat: initialData?.no_sertifikat || '',
       lokasi_tanah: initialData?.lokasi_tanah || '',
       luas_m2: initialData?.luas_m2 || 0,
-      // Ensure dates are Date objects for the form, converting from string/Timestamp if necessary
-      tgl_terbit: initialData?.tgl_terbit ? new Date(initialData.tgl_terbit) : undefined,
-      pendaftaran_pertama: initialData?.pendaftaran_pertama ? new Date(initialData.pendaftaran_pertama) : undefined,
+      tgl_terbit: initialData?.tgl_terbit ? (initialData.tgl_terbit instanceof Date ? initialData.tgl_terbit : new Date( (initialData.tgl_terbit as Timestamp)?.toDate?.() || initialData.tgl_terbit as string )) : undefined,
       surat_ukur: initialData?.surat_ukur || '',
       nib: initialData?.nib || '',
+      pendaftaran_pertama: initialData?.pendaftaran_pertama ? (initialData.pendaftaran_pertama instanceof Date ? initialData.pendaftaran_pertama : new Date( (initialData.pendaftaran_pertama as Timestamp)?.toDate?.() || initialData.pendaftaran_pertama as string )) : undefined,
     },
   });
 
-  // Disable 'kode' field when editing
-  React.useEffect(() => {
-    if (initialData?.kode) {
-      form.setValue('kode', initialData.kode);
+  const handleCancel = () => {
+    form.reset();
+    if (onCancel) {
+      onCancel();
     }
-  }, [initialData, form]);
-
-  const handleSubmit = (data: CertificateFormData) => {
-    // The 'kode' is part of `data` here.
-    // If editing, `onSubmit` in page.tsx expects `CertificateUpdateInput` (which includes kode for identification).
-    // If creating, `onSubmit` expects `CertificateCreateInput`.
-    // The type for `onSubmit` in `CertificateFormProps` handles this.
-    onSubmit(data);
   };
-
 
   return (
     <Form {...form}>
@@ -84,9 +92,18 @@ export function CertificateForm({ onSubmit, initialData, isSubmitting, onCancel 
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Kode</FormLabel>
-                <FormControl>
-                  <Input placeholder="e.g., K001" {...field} disabled={!!initialData} />
-                </FormControl>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select Kode" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {KODE_CERTIFICATE_OPTIONS.map(option => (
+                      <SelectItem key={option} value={option}>{option}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <FormMessage />
               </FormItem>
             )}
@@ -96,9 +113,9 @@ export function CertificateForm({ onSubmit, initialData, isSubmitting, onCancel 
             name="nama_pemegang"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Nama Pemegang</FormLabel>
+                <FormLabel>Nama Pemegang (pisahkan dengan koma)</FormLabel>
                 <FormControl>
-                  <Input placeholder="e.g., John Doe" {...field} />
+                  <Input placeholder="e.g., John Doe, Jane Smith" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -110,9 +127,18 @@ export function CertificateForm({ onSubmit, initialData, isSubmitting, onCancel 
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Surat Hak</FormLabel>
-                <FormControl>
-                  <Input placeholder="e.g., SHM" {...field} />
-                </FormControl>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select Surat Hak" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {SURAT_HAK_OPTIONS.map(option => (
+                      <SelectItem key={option} value={option}>{option}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <FormMessage />
               </FormItem>
             )}
@@ -137,7 +163,7 @@ export function CertificateForm({ onSubmit, initialData, isSubmitting, onCancel 
               <FormItem>
                 <FormLabel>Luas (M2)</FormLabel>
                 <FormControl>
-                  <Input type="number" placeholder="e.g., 150" {...field} />
+                  <Input type="number" placeholder="e.g., 150" {...field} onChange={e => field.onChange(parseInt(e.target.value,10) || 0)} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -177,6 +203,9 @@ export function CertificateForm({ onSubmit, initialData, isSubmitting, onCancel 
                         date > new Date() || date < new Date("1900-01-01")
                       }
                       initialFocus
+                      captionLayout="dropdown-buttons"
+                      fromYear={1900}
+                      toYear={currentYear}
                     />
                   </PopoverContent>
                 </Popover>
@@ -244,6 +273,9 @@ export function CertificateForm({ onSubmit, initialData, isSubmitting, onCancel 
                         date > new Date() || date < new Date("1900-01-01")
                       }
                       initialFocus
+                      captionLayout="dropdown-buttons"
+                      fromYear={1900}
+                      toYear={currentYear}
                     />
                   </PopoverContent>
                 </Popover>
@@ -266,8 +298,7 @@ export function CertificateForm({ onSubmit, initialData, isSubmitting, onCancel 
           />
         </div>
         <div className="flex flex-col sm:flex-row sm:justify-end gap-2 pt-4">
-            {/* Use the onCancel prop for the cancel button */}
-            <Button type="button" variant="outline" onClick={onCancel} className="w-full sm:w-auto">Cancel</Button>
+            <Button type="button" variant="outline" onClick={handleCancel} className="w-full sm:w-auto">Cancel</Button>
             <Button type="submit" disabled={isSubmitting} className="w-full sm:w-auto">
               {isSubmitting ? 'Submitting...' : (initialData?.kode ? 'Update Certificate' : 'Add Certificate')}
             </Button>

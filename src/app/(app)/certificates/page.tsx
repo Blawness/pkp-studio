@@ -3,9 +3,9 @@
 
 import React, { useState, useMemo, useCallback } from 'react';
 import { CertificateTable } from '@/components/certificates/CertificateTable';
-import { CertificateForm } from '@/components/certificates/CertificateForm';
-// Use generated types from Data Connect SDK
-import type { Certificate as GeneratedCertificate, CertificateCreateInput, CertificateUpdateInput } from '@firebasegen/default-connector';
+import { CertificateForm, type CertificateFormData } from '@/components/certificates/CertificateForm';
+import type { Certificate } from '@/lib/types';
+import { mockCertificates } from '@/lib/mockData';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Search, PlusCircle, RefreshCw } from 'lucide-react';
@@ -16,27 +16,13 @@ import {
   DialogTitle,
   DialogDescription,
   DialogTrigger,
-  DialogClose, // Import DialogClose
 } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 import { useToast } from "@/hooks/use-toast";
-import { 
-  useListCertificatesQuery, 
-  useCreateCertificateMutation, 
-  useUpdateCertificateMutation, 
-  useDeleteCertificateMutation 
-} from '@firebasegen/default-connector/react'; // Adjusted import path
+import { SURAT_HAK_OPTIONS, KODE_CERTIFICATE_OPTIONS } from '@/lib/constants';
 
-// Adapt GeneratedCertificate to local Certificate type if needed, or use GeneratedCertificate directly
-// For simplicity, we'll adapt the data for the table. The form will use stricter types.
-export interface DisplayCertificate extends Omit<GeneratedCertificate, 'tgl_terbit' | 'pendaftaran_pertama' | 'createdAt' | 'updatedAt'> {
-  id: string; // Ensure id is string, DataConnect uses 'kode' as id for Certificate
-  tgl_terbit: Date;
-  pendaftaran_pertama: Date;
-  createdAt?: Date;
-  updatedAt?: Date;
-  actions?: boolean;
-}
-
+type SortableCertificateKey = 'kode' | 'nama_pemegang' | 'surat_hak' | 'no_sertifikat' | 'luas_m2' | 'tgl_terbit';
 
 export default function CertificatesPage() {
   const { toast } = useToast();
@@ -48,28 +34,66 @@ export default function CertificatesPage() {
   const deleteCertificateMutation = useDeleteCertificateMutation();
 
   const [searchTerm, setSearchTerm] = useState('');
+  const [suratHakFilter, setSuratHakFilter] = useState<string>('all');
+  const [kodeFilter, setKodeFilter] = useState<string>('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingCertificate, setEditingCertificate] = useState<DisplayCertificate | undefined>(undefined);
+  const [editingCertificate, setEditingCertificate] = useState<Certificate | undefined>(undefined);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [sortConfig, setSortConfig] = useState<{ key: SortableCertificateKey; direction: 'asc' | 'desc' } | null>(null);
 
-  const certificates = useMemo(() => {
-    if (!certificatesData?.listCertificates) return [];
-    return certificatesData.listCertificates.map(cert => ({
-      ...cert,
-      id: cert.kode, // Use kode as id for display consistency if needed
-      tgl_terbit: new Date(cert.tgl_terbit),
-      pendaftaran_pertama: new Date(cert.pendaftaran_pertama),
-      createdAt: cert.createdAt ? new Date(cert.createdAt) : undefined,
-      updatedAt: cert.updatedAt ? new Date(cert.updatedAt) : undefined,
-    }));
-  }, [certificatesData]);
+  useEffect(() => {
+    setCertificates(mockCertificates);
+  }, []);
 
-  const filteredCertificates = useMemo(() => {
-    return certificates.filter(cert =>
-      Object.values(cert).some(value =>
-        String(value).toLowerCase().includes(searchTerm.toLowerCase())
-      )
+  const handleSort = useCallback((key: SortableCertificateKey) => {
+    setSortConfig(prevSortConfig => {
+      const isAsc = prevSortConfig?.key === key && prevSortConfig.direction === 'asc';
+      return { key, direction: isAsc ? 'desc' : 'asc' };
+    });
+  }, []);
+
+  const filteredAndSortedCertificates = useMemo(() => {
+    if (!certificates) {
+      return [];
+    }
+    let filtered = certificates.filter(cert =>
+      (suratHakFilter === 'all' || cert.surat_hak === suratHakFilter) &&
+      (kodeFilter === 'all' || cert.kode === kodeFilter) &&
+      (Object.values(cert).some(value => {
+        if (Array.isArray(value)) {
+          return value.some(name => String(name).toLowerCase().includes(searchTerm.toLowerCase()));
+        }
+        return String(value).toLowerCase().includes(searchTerm.toLowerCase());
+      }))
     );
-  }, [certificates, searchTerm]);
+
+    if (sortConfig) {
+      filtered.sort((a, b) => {
+        let valA = a[sortConfig.key];
+        let valB = b[sortConfig.key];
+
+        if (sortConfig.key === 'nama_pemegang') {
+          valA = Array.isArray(valA) ? valA[0] || '' : '';
+          valB = Array.isArray(valB) ? valB[0] || '' : '';
+        }
+        
+        if (sortConfig.key === 'tgl_terbit') { 
+            valA = new Date(valA as Date).getTime();
+            valB = new Date(valB as Date).getTime();
+        }
+
+
+        if (typeof valA === 'string' && typeof valB === 'string') {
+          return sortConfig.direction === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+        }
+        if (typeof valA === 'number' && typeof valB === 'number') {
+          return sortConfig.direction === 'asc' ? valA - valB : valB - valA;
+        }
+        return 0;
+      });
+    }
+    return filtered;
+  }, [certificates, searchTerm, suratHakFilter, kodeFilter, sortConfig]);
 
   const handleAddCertificate = useCallback(() => {
     setEditingCertificate(undefined);
@@ -81,36 +105,43 @@ export default function CertificatesPage() {
     setIsModalOpen(true);
   }, []);
 
-  const handleDeleteCertificate = useCallback(async (certificateKode: string) => {
-    try {
-      await deleteCertificateMutation.mutateAsync({ kode: certificateKode });
-      toast({ variant: "destructive", title: "Certificate Deleted", description: `Certificate with kode ${certificateKode} has been removed.` });
-      refetch(); // Refetch list after deletion
-    } catch (e: any) {
-      toast({ variant: "destructive", title: "Deletion Failed", description: e.message || "Could not delete certificate." });
-    }
-  }, [deleteCertificateMutation, toast, refetch]);
+  const handleDeleteCertificate = useCallback((certificateId: string) => {
+    setCertificates(prev => prev ? prev.filter(cert => cert.id !== certificateId) : null);
+    toast({ variant: "destructive", title: "Certificate Deleted", description: `Certificate ID ${certificateId} has been removed.` });
+  }, [toast]);
 
-  const handleFormSubmit = useCallback(async (data: CertificateCreateInput | Omit<CertificateUpdateInput, 'id'>) => { // Omit id from update input type here as kode is used
-    try {
+  const handleFormSubmit = useCallback(async (data: CertificateFormData) => {
+    setIsSubmitting(true);
+    await new Promise(resolve => setTimeout(resolve, 1000)); 
+
+    const namesArray = data.nama_pemegang.split(',').map(name => name.trim()).filter(name => name.length > 0);
+
+    setCertificates(prevCertificates => {
+      const currentCertificates = prevCertificates || [];
       if (editingCertificate) {
-        const updateData: CertificateUpdateInput = {
-          kode: editingCertificate.kode, // Use kode from editingCertificate
-          ...(data as Omit<CertificateUpdateInput, 'kode'>), // Cast data, ensuring kode isn't duplicated from data
-        };
-        await updateCertificateMutation.mutateAsync(updateData);
-        toast({ title: "Certificate Updated", description: `Certificate ${updateData.kode} has been updated.` });
+        toast({ title: "Certificate Updated", description: `Certificate ${data.kode} has been updated.` });
+        return currentCertificates.map(cert => 
+          cert.id === editingCertificate.id 
+            ? { ...cert, ...data, nama_pemegang: namesArray, id: cert.id, tgl_terbit: data.tgl_terbit, pendaftaran_pertama: data.pendaftaran_pertama } 
+            : cert
+        );
       } else {
-        await createCertificateMutation.mutateAsync(data as CertificateCreateInput);
-        toast({ title: "Certificate Added", description: `Certificate ${(data as CertificateCreateInput).kode} has been added.` });
+        const newCertificate: Certificate = { 
+          ...data, 
+          id: `cert-${Date.now()}`, 
+          nama_pemegang: namesArray,
+          tgl_terbit: data.tgl_terbit,
+          pendaftaran_pertama: data.pendaftaran_pertama
+        };
+        toast({ title: "Certificate Added", description: `Certificate ${data.kode} has been added.` });
+        return [newCertificate, ...currentCertificates];
       }
-      refetch(); // Refetch list after creation/update
-      setIsModalOpen(false);
-      setEditingCertificate(undefined);
-    } catch (e: any) {
-      toast({ variant: "destructive", title: "Submission Failed", description: e.message || "Could not save certificate." });
-    }
-  }, [editingCertificate, createCertificateMutation, updateCertificateMutation, toast, refetch]);
+    });
+
+    setIsSubmitting(false);
+    setIsModalOpen(false);
+    setEditingCertificate(undefined);
+  }, [editingCertificate, toast]);
   
   if (isLoading) {
     return (
@@ -152,28 +183,63 @@ export default function CertificatesPage() {
             <CertificateForm
               onSubmit={handleFormSubmit}
               initialData={editingCertificate}
-              isSubmitting={createCertificateMutation.isPending || updateCertificateMutation.isPending}
-              onCancel={() => setIsModalOpen(false)} // Pass cancel handler
+              isSubmitting={isSubmitting}
+              onCancel={() => {
+                setIsModalOpen(false);
+                setEditingCertificate(undefined);
+              }}
             />
           </DialogContent>
         </Dialog>
       </div>
 
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-        <Input
-          type="search"
-          placeholder="Search certificates..."
-          className="pl-10 w-full md:w-1/3"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+        <div className="relative md:col-span-2">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+          <Input
+            type="search"
+            placeholder="Search certificates..."
+            className="pl-10 w-full"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+        <div>
+          <Label htmlFor="kodeFilter" className="text-sm font-medium">Filter by Kode</Label>
+          <Select value={kodeFilter} onValueChange={setKodeFilter}>
+            <SelectTrigger id="kodeFilter" className="w-full mt-1">
+              <SelectValue placeholder="All Kode" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Kode</SelectItem>
+              {KODE_CERTIFICATE_OPTIONS.map(option => (
+                <SelectItem key={option} value={option}>{option}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label htmlFor="suratHakFilter" className="text-sm font-medium">Filter by Surat Hak</Label>
+          <Select value={suratHakFilter} onValueChange={setSuratHakFilter}>
+            <SelectTrigger id="suratHakFilter" className="w-full mt-1">
+              <SelectValue placeholder="All Surat Hak" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Surat Hak</SelectItem>
+              {SURAT_HAK_OPTIONS.map(option => (
+                <SelectItem key={option} value={option}>{option}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
-
+      
       <CertificateTable
-        certificates={filteredCertificates as any[]} // Cast to any[] if DisplayCertificate causes issues with table props
-        onEdit={handleEditCertificate as any}
+        certificates={filteredAndSortedCertificates}
+        onEdit={handleEditCertificate}
         onDelete={handleDeleteCertificate}
+        sortConfig={sortConfig}
+        handleSort={handleSort}
       />
     </div>
   );

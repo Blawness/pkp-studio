@@ -16,20 +16,26 @@ import {
 import { UserCircle, Moon, Sun, LogOutIcon } from "lucide-react"; // Changed LogOut to LogOutIcon to avoid name clash
 import { Breadcrumbs } from "@/components/shared/Breadcrumbs";
 import { APP_NAME } from "@/lib/constants";
-import { useAuth } from "@/contexts/AuthContext";
-import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext"; 
+import Link from "next/link";
+import { useIsMobile } from "@/hooks/use-mobile";
 
+// Mock theme toggler
 const ThemeToggle = () => {
   const [isDark, setIsDark] = React.useState(false);
   React.useEffect(() => {
-    const root = window.document.documentElement;
-    const initialColorValue = root.classList.contains('dark');
-    setIsDark(initialColorValue);
+    const actualmenteEsOscuro = document.documentElement.classList.contains('dark');
+    setIsDark(actualmenteEsOscuro);
+    if (actualmenteEsOscuro) {
+      document.body.classList.add('dark-theme-active'); 
+    } else {
+      document.body.classList.remove('dark-theme-active');
+    }
   }, []);
 
   const toggleTheme = () => {
-    const root = window.document.documentElement;
-    root.classList.toggle('dark');
+    document.documentElement.classList.toggle('dark');
+    document.body.classList.toggle('dark-theme-active'); 
     setIsDark(!isDark);
   };
 
@@ -42,55 +48,62 @@ const ThemeToggle = () => {
 
 
 export function Header() {
-  const { user, logout } = useAuth();
-  const router = useRouter();
+  const { user, logout } = useAuth(); 
+  const isMobile = useIsMobile();
 
-  const getAvatarFallback = () => {
-    if (user?.name) {
-      return user.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0,2);
+  const getInitials = (name?: string, email?: string) => {
+    if (name) {
+      const parts = name.split(' ');
+      if (parts.length > 1) {
+        return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+      }
+      return name.substring(0, 2).toUpperCase();
     }
-    if (user?.email) {
-      return user.email[0].toUpperCase();
+    if (email) {
+      return email.substring(0, 2).toUpperCase();
     }
     return "AU"; // Default fallback
-  }
-
-  const handleProfileClick = () => {
-    router.push('/settings'); // Navigate to settings page as profile page
   };
 
+
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 md:px-6">
-      <div className="flex items-center gap-2 md:hidden">
-        <SidebarTrigger />
-        <span className="font-headline text-lg font-semibold">{APP_NAME}</span>
+    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60 md:px-6">
+      {/* Left Group */}
+      <div className="flex items-center gap-2">
+        {isMobile ? (
+          <>
+            <SidebarTrigger />
+            <span className="font-headline text-lg font-semibold">{APP_NAME}</span>
+          </>
+        ) : (
+          <Breadcrumbs />
+        )}
       </div>
-      <div className="hidden md:block">
-        <Breadcrumbs />
-      </div>
-      <div className="ml-auto flex items-center gap-4">
+
+      {/* Right Group */}
+      <div className="flex items-center gap-3 md:gap-4">
         <ThemeToggle />
         {user && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                 <Avatar className="h-8 w-8">
-                  {/* Placeholder for actual user image if available */}
-                  {/* <AvatarImage src={user.imageUrl || "https://placehold.co/40x40.png"} alt={user.name || "User avatar"} data-ai-hint="user avatar" /> */}
-                  <AvatarImage src="https://placehold.co/40x40.png" alt={user.name || "User avatar"} data-ai-hint="user avatar" />
-                  <AvatarFallback>{getAvatarFallback()}</AvatarFallback> 
+                  <AvatarImage src="https://placehold.co/40x40.png" alt={user.name || user.email} data-ai-hint="user avatar" />
+                  <AvatarFallback>{getInitials(user.name, user.email)}</AvatarFallback>
                 </Avatar>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>My Account</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleProfileClick}>
-                <UserCircle className="mr-2 h-4 w-4" />
-                Profile
+              <DropdownMenuItem asChild>
+                 <Link href="/settings"> {/* Assuming /settings is the profile page */}
+                    <UserCircle className="mr-2 h-4 w-4" />
+                    Profile
+                </Link>
               </DropdownMenuItem>
               <DropdownMenuItem onClick={logout}>
-                <LogOutIcon className="mr-2 h-4 w-4" /> {/* Changed LogOut to LogOutIcon */}
+                <LogOut className="mr-2 h-4 w-4" />
                 Logout
               </DropdownMenuItem>
             </DropdownMenuContent>

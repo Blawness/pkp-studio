@@ -1,44 +1,46 @@
 
-"use client";
+"use client"; // Required for hooks like useAuth, useRouter, useEffect
 
 import React, { useEffect } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
 import { SidebarProvider, Sidebar, SidebarInset } from "@/components/ui/sidebar";
 import { Header } from "@/components/layout/Header";
 import { SidebarNav } from "@/components/layout/SidebarNav";
-import { useAuth } from '@/contexts/AuthContext';
-import { useRouter } from 'next/navigation';
-import { Loader2 } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext'; // Import useAuth
+import { Loader2 } from 'lucide-react'; // For loading indicator
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const { user, isLoading } = useAuth();
+  const { user, loading } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
-    if (!isLoading && !user) {
+    if (!loading && !user && pathname !== '/login') {
       router.push('/login');
     }
-  }, [user, isLoading, router]);
+  }, [user, loading, router, pathname]);
 
-  if (isLoading) {
+  if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-background text-foreground">
-        <Loader2 className="mr-2 h-8 w-8 animate-spin text-primary" />
-        <span>Loading application...</span>
+      <div className="flex h-screen items-center justify-center bg-background">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
       </div>
     );
   }
 
-  if (!user) {
-    // This case should ideally be handled by the useEffect redirect,
-    // but as a fallback, prevent rendering children if no user and not loading.
-    // Or show a message, though the redirect should be quick.
+  if (!user && pathname !== '/login') {
+     // This state should ideally be caught by the useEffect,
+     // but as a fallback, show loading or redirect.
     return (
-         <div className="flex h-screen items-center justify-center bg-background text-foreground">
-            <span>Redirecting to login...</span>
-        </div>
+      <div className="flex h-screen items-center justify-center bg-background">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        <p className="ml-2">Redirecting to login...</p>
+      </div>
     );
   }
-
+  
+  // If user is authenticated, or if somehow still loading but on login page, render the layout
+  // The login page itself won't be wrapped by this AppLayout.
   return (
     <SidebarProvider defaultOpen={true}>
       <Sidebar variant="sidebar" collapsible="icon" className="border-r">
@@ -46,7 +48,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       </Sidebar>
       <SidebarInset>
         <Header />
-        <main className="flex flex-col flex-1 p-4 md:p-6 lg:p-8">
+        <main className="flex flex-col flex-1 p-4 md:p-6 lg:p-8 pt-16"> {/* Added pt-16 */}
           {children}
         </main>
       </SidebarInset>

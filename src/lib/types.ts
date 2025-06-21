@@ -1,12 +1,8 @@
 
-// The Certificate type definition can be removed or adapted if
-// you primarily use the generated types from @firebasegen/default-connector.
-// For now, it's kept for reference but might not be directly used by pages
-// that consume Data Connect generated types.
 export interface Certificate {
   id: string; // In DataConnect schema, 'kode' is used as 'id'
   kode: string;
-  nama_pemegang: string;
+  nama_pemegang: string[]; // Changed from string to string[]
   surat_hak: string;
   no_sertifikat: string;
   lokasi_tanah: string;
@@ -49,3 +45,21 @@ export type NavItem = {
   icon: React.ElementType;
   disabled?: boolean;
 };
+
+export interface AuthUser {
+  id: string;
+  email: string;
+  name?: string;
+  // Add other relevant user properties
+}
+
+export interface TanahGarapanEntry {
+  id: string;
+  letakTanah: string; // e.g., "Blok A Sawah"
+  namaPemegangHak: string;
+  letterC: string;
+  nomorSuratKeteranganGarapan: string;
+  luas: number; // in m2
+  keterangan?: string;
+  createdAt: Date;
+}

@@ -1,88 +1,91 @@
 
 "use client";
 
-import type { User } from '@/lib/types';
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
+import type { AuthUser } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast";
-
-// A simpler user type for the auth context
-export interface AuthUser {
-  id: string;
-  email: string;
-  name: string;
-  role: 'admin' | 'user';
-}
 
 interface AuthContextType {
   user: AuthUser | null;
-  isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, pass: string) => Promise<boolean>;
   logout: () => void;
+  loading: boolean;
+  authError: string | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Mock user credentials
-const MOCK_ADMIN_EMAIL = "admin@databasepkp.com";
-const MOCK_ADMIN_PASSWORD = "password123";
-const MOCK_USER_EMAIL = "user@databasepkp.com";
-const MOCK_USER_PASSWORD = "password123";
-
+const MOCK_ADMIN_EMAIL = 'admin@pkp.com';
+const MOCK_USER_EMAIL = 'user@pkp.com';
+const MOCK_SHARED_PASSWORD = 'password'; // Template password
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [loading, setLoading] = useState(true); // Start with loading true to check initial auth status
+  const [authError, setAuthError] = useState<string | null>(null);
   const router = useRouter();
   const { toast } = useToast();
 
   useEffect(() => {
-    // Check for persisted user in localStorage
-    try {
-      const storedUser = localStorage.getItem('authUser');
-      if (storedUser) {
+    // Mock initial auth check. In a real app, you'd verify a token or session.
+    const storedUser = localStorage.getItem('authUser');
+    if (storedUser) {
+      try {
         setUser(JSON.parse(storedUser));
+      } catch (e) {
+        localStorage.removeItem('authUser');
       }
-    } catch (error) {
-      console.error("Failed to parse authUser from localStorage", error);
-      localStorage.removeItem('authUser');
     }
-    setIsLoading(false);
+    setLoading(false);
   }, []);
 
-  const login = async (email: string, password: string): Promise<void> => {
-    setIsLoading(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 500));
-
-    let authenticatedUser: AuthUser | null = null;
-
-    if (email === MOCK_ADMIN_EMAIL && password === MOCK_ADMIN_PASSWORD) {
-      authenticatedUser = { id: 'user-1', name: 'Admin PKP', email: MOCK_ADMIN_EMAIL, role: 'admin' };
-    } else if (email === MOCK_USER_EMAIL && password === MOCK_USER_PASSWORD) {
-      authenticatedUser = { id: 'user-2', name: 'User PKP', email: MOCK_USER_EMAIL, role: 'user' };
-    }
-
-    if (authenticatedUser) {
-      setUser(authenticatedUser);
-      localStorage.setItem('authUser', JSON.stringify(authenticatedUser));
-      toast({ title: "Login Successful", description: `Welcome back, ${authenticatedUser.name}!` });
-      router.push('/dashboard');
-    } else {
-      toast({ variant: "destructive", title: "Login Failed", description: "Invalid email or password." });
-    }
-    setIsLoading(false);
+  const login = async (email: string, pass: string): Promise<boolean> => {
+    setLoading(true);
+    setAuthError(null);
+    // Mock API call
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        if (
+          (email.toLowerCase() === MOCK_ADMIN_EMAIL && pass === MOCK_SHARED_PASSWORD) ||
+          (email.toLowerCase() === MOCK_USER_EMAIL && pass === MOCK_SHARED_PASSWORD)
+        ) {
+          const mockUser: AuthUser = { 
+            id: `user-${Date.now()}`, 
+            email, 
+            name: email.split('@')[0] 
+          };
+          setUser(mockUser);
+          localStorage.setItem('authUser', JSON.stringify(mockUser));
+          setTimeout(() => {
+            toast({ title: "Login Successful", description: `Welcome back, ${mockUser.name}!` });
+          }, 0);
+          resolve(true);
+        } else {
+          setAuthError('Invalid email or password.');
+          setTimeout(() => {
+            toast({ variant: "destructive", title: "Login Failed", description: "Invalid email or password." });
+          }, 0);
+          resolve(false);
+        }
+        setLoading(false);
+      }, 1000);
+    });
   };
 
   const logout = () => {
+    setLoading(true);
     setUser(null);
     localStorage.removeItem('authUser');
-    toast({ title: "Logged Out", description: "You have been successfully logged out." });
-    router.push('/login');
+    router.push('/login'); // Redirect to login after logout
+    setTimeout(() => {
+      toast({ title: "Logged Out", description: "You have been successfully logged out." });
+    }, 0);
+    setLoading(false);
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, logout }}>
+    <AuthContext.Provider value={{ user, login, logout, loading, authError }}>
       {children}
     </AuthContext.Provider>
   );
@@ -95,3 +98,4 @@ export const useAuth = (): AuthContextType => {
   }
   return context;
 };
+

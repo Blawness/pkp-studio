@@ -11,74 +11,46 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import type { User } from '@/lib/types';
 
-const getUserSchema = (isEditing: boolean) => {
-  const baseFields = {
-    name: z.string().min(1, "Name is required"),
-    email: z.string().email("Invalid email address"),
-    role: z.enum(['admin', 'user'], { required_error: "Role is required" }),
-  };
+// Base schema representing the form's data structure.
+// Passwords are optional and can be empty strings (for edit mode).
+const baseFormSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  email: z.string().email("Invalid email address"),
+  role: z.enum(['admin', 'user'] as const, { required_error: "Role is required" }),
+  password: z.string().min(8, "Password must be at least 8 characters").optional().or(z.literal('')),
+  confirmPassword: z.string().optional().or(z.literal('')),
+});
 
-  if (isEditing) {
-    return z.object({
-      ...baseFields,
-      password: z.string().optional().or(z.literal('')), // Optional, allow empty string
-      confirmPassword: z.string().optional().or(z.literal('')),
-    }).superRefine((data, ctx) => {
-      const pass = data.password || ""; // Treat undefined/null as empty string
-      const confirmPass = data.confirmPassword || "";
+type UserFormData = z.infer<typeof baseFormSchema>;
 
-      if (pass.length > 0) { // If password is being set/changed
-        if (pass.length < 8) {
-          ctx.addIssue({
-            path: ['password'],
-            message: 'Password must be at least 8 characters',
-            code: z.ZodIssueCode.too_small,
-            minimum: 8,
-            type: 'string',
-            inclusive: true,
-          });
-        }
-        if (confirmPass.length === 0) {
-             ctx.addIssue({
-                path: ['confirmPassword'],
-                message: 'Please confirm your new password',
-                code: z.ZodIssueCode.custom,
-             });
-        } else if (pass !== confirmPass) {
-          ctx.addIssue({
-            path: ['confirmPassword'],
-            message: 'Passwords do not match',
-            code: z.ZodIssueCode.custom,
-          });
-        }
-      } else if (confirmPass.length > 0 && pass.length === 0) {
-        // If confirm password is set but main password is not (which is an invalid state for changing password)
-        ctx.addIssue({
-            path: ['password'],
-            message: 'Enter a new password if you wish to change it, or clear confirm password field.',
-            code: z.ZodIssueCode.custom,
-        });
-      }
-    });
-  } else { // Adding new user
-    return z.object({
-      ...baseFields,
-      password: z.string().min(8, "Password must be at least 8 characters"),
-      confirmPassword: z.string().min(8, "Confirm password must be at least 8 characters"),
-    }).refine(data => data.password === data.confirmPassword, {
-      message: "Passwords do not match",
-      path: ["confirmPassword"],
-    });
+// Refinement logic for password confirmation
+const passwordConfirmationRefinement = (data: { password?: string; confirmPassword?: string }) => {
+  // If a password is provided (not undefined, not an empty string for form purposes), it must match confirmation.
+  if (data.password && data.password.length > 0) {
+    return data.password === data.confirmPassword;
   }
+  return true; // Passes if no new password is being set
+};
+const passwordConfirmationParams = {
+  message: "Passwords do not match",
+  path: ["confirmPassword"],
 };
 
-// This type can be used for the data passed to onSubmit
-type UserSubmitData = {
-  name: string;
-  email: string;
-  role: 'admin' | 'user';
-  password?: string; // Password is optional in the submission data
-};
+// Schema for adding a new user (passwords are required)
+const addUserSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  email: z.string().email("Invalid email address"),
+  role: z.enum(['admin', 'user'] as const, { required_error: "Role is required" }),
+  password: z.string().min(8, "Password must be at least 8 characters"),
+  confirmPassword: z.string().min(1, "Confirm password is required"), // Ensure confirm is not empty
+}).refine(data => data.password === data.confirmPassword, { // Simpler refine for add, as both are required
+  message: "Passwords do not match",
+  path: ["confirmPassword"],
+});
+
+
+// Schema for editing an existing user (passwords are optional, but if provided, must match)
+const editUserSchema = baseFormSchema.refine(passwordConfirmationRefinement, passwordConfirmationParams);
 
 interface UserFormProps {
   onSubmit: (data: UserSubmitData) => void;
@@ -88,38 +60,17 @@ interface UserFormProps {
 }
 
 export function UserForm({ onSubmit, initialData, isEditing = false, isSubmitting }: UserFormProps) {
-  const formSchema = React.useMemo(() => getUserSchema(isEditing), [isEditing]);
-  type CurrentFormValues = z.infer<typeof formSchema>;
-
-  const form = useForm<CurrentFormValues>({
-    resolver: zodResolver(formSchema),
+  const form = useForm<UserFormData>({
+    resolver: zodResolver(isEditing ? editUserSchema : addUserSchema),
     defaultValues: {
       name: initialData?.name || '',
       email: initialData?.email || '',
       role: initialData?.role || 'user',
-      password: '', // Passwords always start empty in the form
-      confirmPassword: '',
+      password: '', // Default to empty string, user types new password if needed
+      confirmPassword: '', // Default to empty string
     },
   });
-
-  const handleFormSubmit = (data: CurrentFormValues) => {
-    const { confirmPassword, password, ...submissionDataFields } = data;
-    
-    const finalSubmitData: UserSubmitData = {
-        name: submissionDataFields.name,
-        email: submissionDataFields.email,
-        role: submissionDataFields.role,
-    };
-
-    if (password && (password as string).length > 0) {
-      finalSubmitData.password = password as string;
-    }
-    
-    onSubmit(finalSubmitData);
-  };
   
-  const watchedPassword = form.watch("password");
-
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6">
@@ -214,3 +165,4 @@ export function UserForm({ onSubmit, initialData, isEditing = false, isSubmittin
     </Form>
   );
 }
+

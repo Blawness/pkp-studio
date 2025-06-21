@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -54,11 +55,11 @@ function Calendar({
         ...classNames,
       }}
       components={{
-        IconLeft: ({ className, ...props }) => (
-          <ChevronLeft className={cn("h-4 w-4", className)} {...props} />
+        IconLeft: ({ className: iconClassName, ...restProps }) => (
+          <ChevronLeft className={cn("h-4 w-4", iconClassName)} {...restProps} />
         ),
-        IconRight: ({ className, ...props }) => (
-          <ChevronRight className={cn("h-4 w-4", className)} {...props} />
+        IconRight: ({ className: iconClassName, ...restProps }) => (
+          <ChevronRight className={cn("h-4 w-4", iconClassName)} {...restProps} />
         ),
       }}
       {...props}
@@ -68,3 +69,4 @@ function Calendar({
 Calendar.displayName = "Calendar"
 
 export { Calendar }
+
