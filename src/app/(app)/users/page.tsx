@@ -66,17 +66,15 @@ export default function UsersPage() {
   };
 
   const handleDeleteUser = useCallback(async (userId: string) => {
-    setIsSubmitting(true);
     try {
       await deleteUser(userId);
       toast({ variant: "destructive", title: "User Deleted", description: `User has been removed.` });
+      fetchUsers();
     } catch (error) {
       console.error("Failed to delete user:", error);
       toast({ variant: "destructive", title: "Error", description: `Failed to delete user.` });
-    } finally {
-      setIsSubmitting(false);
     }
-  }, [toast]);
+  }, [toast, fetchUsers]);
 
   const handleFormSubmit = useCallback(async (data: UserSubmitData) => {
     setIsSubmitting(true);
@@ -88,6 +86,7 @@ export default function UsersPage() {
         await addUser(data);
         toast({ title: "User Added", description: `User ${data.name} has been added.` });
       }
+      fetchUsers();
     } catch (error) {
       console.error("Failed to save user:", error);
       toast({ variant: "destructive", title: "Error", description: "A user with this email may already exist." });
@@ -96,7 +95,7 @@ export default function UsersPage() {
       setIsModalOpen(false);
       setEditingUser(undefined);
     }
-  }, [editingUser, toast]);
+  }, [editingUser, toast, fetchUsers]);
 
   if (users === null) {
     return (

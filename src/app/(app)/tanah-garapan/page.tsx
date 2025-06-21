@@ -92,13 +92,14 @@ export default function TanahGarapanPage() {
     try {
       await deleteTanahGarapanEntry(entryId);
       toast({ variant: "destructive", title: "Data Dihapus", description: `Data tanah garapan telah dihapus.` });
+      fetchTanahGarapanEntries();
     } catch (error) {
       console.error("Failed to delete Tanah Garapan entry:", error);
       toast({ variant: "destructive", title: "Error", description: `Gagal menghapus data tanah garapan.` });
     } finally {
       setIsSubmitting(false);
     }
-  }, [toast]);
+  }, [toast, fetchTanahGarapanEntries]);
 
   const handleFormSubmit = useCallback(async (data: TanahGarapanFormData) => {
     setIsSubmitting(true);
@@ -111,6 +112,7 @@ export default function TanahGarapanPage() {
         toast({ title: "Data Ditambahkan", description: `Data baru untuk ${data.letakTanah} telah ditambahkan.` });
         setActiveAccordionItem(data.letakTanah);
       }
+      fetchTanahGarapanEntries();
     } catch (error) {
       console.error("Failed to save Tanah Garapan entry:", error);
       toast({ variant: "destructive", title: "Error", description: `Gagal menyimpan data.` });
@@ -119,7 +121,7 @@ export default function TanahGarapanPage() {
       setIsModalOpen(false);
       setEditingEntry(undefined);
     }
-  }, [editingEntry, toast]);
+  }, [editingEntry, toast, fetchTanahGarapanEntries]);
 
   if (entries === null) {
     return (

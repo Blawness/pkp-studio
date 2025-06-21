@@ -114,14 +114,14 @@ export default function CertificatesPage() {
     try {
       await deleteCertificate(certificateId);
       toast({ variant: "destructive", title: "Certificate Deleted", description: "Certificate has been removed." });
-      // No need to call fetchCertificates, revalidatePath handles it.
+      fetchCertificates(); // Refresh data
     } catch (error) {
       console.error("Failed to delete certificate:", error);
       toast({ variant: "destructive", title: "Error", description: "Failed to delete certificate." });
     } finally {
       setIsSubmitting(false);
     }
-  }, [toast]);
+  }, [toast, fetchCertificates]);
 
   const handleFormSubmit = useCallback(async (data: CertificateFormData) => {
     setIsSubmitting(true);
@@ -133,7 +133,7 @@ export default function CertificatesPage() {
         await addCertificate(data);
         toast({ title: "Certificate Added", description: "New certificate has been added." });
       }
-      // No need to call fetchCertificates, revalidatePath handles it.
+      fetchCertificates(); // Refresh data
     } catch (error) {
       console.error("Failed to save certificate:", error);
       toast({ variant: "destructive", title: "Error", description: "Failed to save certificate." });
@@ -142,7 +142,7 @@ export default function CertificatesPage() {
       setIsModalOpen(false);
       setEditingCertificate(undefined);
     }
-  }, [editingCertificate, toast]);
+  }, [editingCertificate, toast, fetchCertificates]);
   
   if (certificates === null) {
     return (
