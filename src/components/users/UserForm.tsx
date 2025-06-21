@@ -23,6 +23,9 @@ const baseFormSchema = z.object({
 
 type UserFormData = z.infer<typeof baseFormSchema>;
 
+// This type is for the data passed to the parent component's onSubmit handler.
+export type UserSubmitData = Omit<UserFormData, 'confirmPassword'>;
+
 // Refinement logic for password confirmation
 const passwordConfirmationRefinement = (data: { password?: string; confirmPassword?: string }) => {
   // If a password is provided (not undefined, not an empty string for form purposes), it must match confirmation.
@@ -43,7 +46,7 @@ const addUserSchema = z.object({
   role: z.enum(['admin', 'user'] as const, { required_error: "Role is required" }),
   password: z.string().min(8, "Password must be at least 8 characters"),
   confirmPassword: z.string().min(1, "Confirm password is required"), // Ensure confirm is not empty
-}).refine(data => data.password === data.confirmPassword, { // Simpler refine for add, as both are required
+}).refine(data => data.password === data.confirmPassword, {
   message: "Passwords do not match",
   path: ["confirmPassword"],
 });
@@ -66,10 +69,19 @@ export function UserForm({ onSubmit, initialData, isEditing = false, isSubmittin
       name: initialData?.name || '',
       email: initialData?.email || '',
       role: initialData?.role || 'user',
-      password: '', // Default to empty string, user types new password if needed
-      confirmPassword: '', // Default to empty string
+      password: '',
+      confirmPassword: '',
     },
   });
+
+  const watchedPassword = form.watch('password');
+
+  // This function prepares the data for the parent component.
+  const handleFormSubmit = (data: UserFormData) => {
+    // The confirmPassword field is not needed by the parent.
+    const { confirmPassword, ...submitData } = data;
+    onSubmit(submitData);
+  };
   
   return (
     <Form {...form}>
@@ -165,4 +177,3 @@ export function UserForm({ onSubmit, initialData, isEditing = false, isSubmittin
     </Form>
   );
 }
-

@@ -4,9 +4,13 @@ location: "asia-southeast1"
 schema:
   source: "./schema"
   datasource:
-    postgresql:
-      database: "fdcdb"
+    mysql:
+      database: "sertifikat_pkp"
       cloudSql:
-        instanceId: "studio-fdc"
-      # schemaValidation: "COMPATIBLE"
+        instanceId: "auracert:asia-southeast2:sertifikat-db"
+      credentials:
+        username:
+          fromEnv: "DB_USER"
+        password:
+          fromEnv: "DB_PASSWORD"
 connectorDirs: ["./connector"]
