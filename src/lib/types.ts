@@ -29,7 +29,7 @@ export interface ActivityLog {
   action: string;
   details: string;
   timestamp: Date;
-  payload?: any; // This type is for client-side use, it doesn't represent the DB schema accurately
+  payload?: any; 
 }
 
 export interface StatCardData {
@@ -66,3 +66,17 @@ export interface TanahGarapanEntry {
 }
 
 export type TanahGarapanFormInput = Omit<TanahGarapanEntry, 'id' | 'createdAt' | 'updatedAt'>;
+
+export interface Attendance {
+  id: string;
+  date: Date;
+  checkIn: Date;
+  checkOut: Date | null;
+  userId: string;
+  user: {
+    id: string;
+    name: string;
+  };
+  createdAt: Date;
+  updatedAt: Date;
+}

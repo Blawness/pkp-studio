@@ -1,6 +1,6 @@
 
 import type { NavItem } from '@/lib/types';
-import { LayoutDashboard, ScrollText, Users, History, Settings, Tractor } from 'lucide-react';
+import { LayoutDashboard, ScrollText, Users, History, Settings, Tractor, CalendarCheck } from 'lucide-react';
 
 export const NAV_ITEMS: NavItem[] = [
   {
@@ -17,6 +17,11 @@ export const NAV_ITEMS: NavItem[] = [
     title: 'Tanah Garapan',
     href: '/tanah-garapan',
     icon: Tractor,
+  },
+  {
+    title: 'Attendance',
+    href: '/attendance',
+    icon: CalendarCheck,
   },
   {
     title: 'Users',
