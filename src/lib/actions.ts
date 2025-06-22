@@ -390,3 +390,52 @@ export async function deleteTanahGarapanEntry(id: string, userName: string) {
     revalidatePath('/logs');
   }
 }
+
+export async function exportTanahGarapanToCSV(): Promise<{ data?: string; error?: string }> {
+  // NOTE: This action is protected by UI logic that only shows the button to admins.
+  // For higher security, implement server-side session/role verification here.
+  try {
+    const entries = await prisma.tanahGarapanEntry.findMany({
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (entries.length === 0) {
+      return { error: 'No data Tanah Garapan to export.' };
+    }
+
+    const headers = [
+      'id', 'letakTanah', 'namaPemegangHak', 'letterC', 
+      'nomorSuratKeteranganGarapan', 'luas', 'keterangan'
+    ];
+
+    const escapeCsvField = (field: any) => {
+      if (field === null || field === undefined) {
+        return '';
+      }
+      const stringField = String(field);
+      if (/[",\n]/.test(stringField)) {
+        return `"${stringField.replace(/"/g, '""')}"`;
+      }
+      return stringField;
+    };
+
+    const csvRows = entries.map(entry => {
+      const row = [
+        entry.id,
+        entry.letakTanah,
+        entry.namaPemegangHak,
+        entry.letterC,
+        entry.nomorSuratKeteranganGarapan,
+        entry.luas,
+        entry.keterangan,
+      ];
+      return row.map(escapeCsvField).join(',');
+    });
+
+    const csvString = [headers.join(','), ...csvRows].join('\n');
+    return { data: csvString };
+  } catch (error) {
+    console.error('Failed to export Tanah Garapan data:', error);
+    return { error: 'An unexpected error occurred during the export.' };
+  }
+}

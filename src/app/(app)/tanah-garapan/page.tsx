@@ -24,6 +24,7 @@ import { TanahGarapanForm, type TanahGarapanFormData } from '@/components/tanah-
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/contexts/AuthContext';
 import { getTanahGarapanEntries, addTanahGarapanEntry, updateTanahGarapanEntry, deleteTanahGarapanEntry } from '@/lib/actions';
+import { ExportTanahGarapanButton } from '@/components/tanah-garapan/ExportTanahGarapanButton';
 
 interface GroupedTanahGarapanData {
   [key: string]: {
@@ -142,27 +143,30 @@ export default function TanahGarapanPage() {
     <div className="flex flex-col flex-1 space-y-8">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <h1 className="text-3xl font-headline font-semibold">Data Tanah Garapan</h1>
-        {canManage && (
-          <Dialog open={isModalOpen} onOpenChange={(open) => { setIsModalOpen(open); if (!open) setEditingEntry(undefined); }}>
-            <DialogTrigger asChild>
-              <Button onClick={handleAddEntry}>
-                <PlusCircle className="mr-2 h-4 w-4" /> Tambah Data
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle className="font-headline">{editingEntry ? 'Edit Data' : 'Tambah Data Baru'}</DialogTitle>
-                <DialogDescription>{editingEntry ? 'Perbarui detail data.' : 'Isi formulir untuk menambah data baru.'}</DialogDescription>
-              </DialogHeader>
-              <TanahGarapanForm
-                onSubmit={handleFormSubmit}
-                initialData={editingEntry}
-                isSubmitting={isSubmitting}
-                onCancel={() => { setIsModalOpen(false); setEditingEntry(undefined); }}
-              />
-            </DialogContent>
-          </Dialog>
-        )}
+        <div className="flex items-center gap-2">
+          {canManage && (
+            <Dialog open={isModalOpen} onOpenChange={(open) => { setIsModalOpen(open); if (!open) setEditingEntry(undefined); }}>
+              <DialogTrigger asChild>
+                <Button onClick={handleAddEntry}>
+                  <PlusCircle className="mr-2 h-4 w-4" /> Tambah Data
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle className="font-headline">{editingEntry ? 'Edit Data' : 'Tambah Data Baru'}</DialogTitle>
+                  <DialogDescription>{editingEntry ? 'Perbarui detail data.' : 'Isi formulir untuk menambah data baru.'}</DialogDescription>
+                </DialogHeader>
+                <TanahGarapanForm
+                  onSubmit={handleFormSubmit}
+                  initialData={editingEntry}
+                  isSubmitting={isSubmitting}
+                  onCancel={() => { setIsModalOpen(false); setEditingEntry(undefined); }}
+                />
+              </DialogContent>
+            </Dialog>
+          )}
+          <ExportTanahGarapanButton />
+        </div>
       </div>
 
       {Object.keys(groupedData).length === 0 ? (
