@@ -18,7 +18,7 @@ export async function login(email: string, pass: string): Promise<AuthUser | nul
   const isPasswordValid = await bcrypt.compare(pass, user.password);
   if (!isPasswordValid) return null;
 
-  return { id: user.id, email: user.email, name: user.name, role: user.role };
+  return { id: user.id, email: user.email, name: user.name, role: user.role as AuthUser['role'] };
 }
 
 // --- DASHBOARD ACTIONS ---
@@ -153,6 +153,7 @@ export async function deleteCertificate(id: string, userName: string) {
           user: userName,
           action: 'DELETE_CERTIFICATE',
           details: `Deleted certificate '${certificate.no_sertifikat}'.`,
+          payload: certificate as any,
         }
       });
       revalidatePath('/certificates');
@@ -169,9 +170,6 @@ export async function deleteCertificate(id: string, userName: string) {
 }
 
 export async function exportCertificatesToCSV(): Promise<{ data?: string; error?: string }> {
-  // NOTE: This action is protected by UI logic that only shows the button to admins.
-  // In a production app with higher security needs, you would implement
-  // server-side session/role verification here.
   try {
     const certificates = await prisma.certificate.findMany({
       orderBy: { createdAt: 'desc' },
@@ -202,7 +200,7 @@ export async function exportCertificatesToCSV(): Promise<{ data?: string; error?
       const row = [
         cert.id,
         cert.kode,
-        Array.isArray(cert.nama_pemegang) ? cert.nama_pemegang.join('; ') : '',
+        Array.isArray(cert.nama_pemegang) ? (cert.nama_pemegang as string[]).join('; ') : '',
         cert.surat_hak,
         cert.no_sertifikat,
         cert.lokasi_tanah,
@@ -282,7 +280,7 @@ export async function updateUser(id: string, data: UserSubmitData, performedBy: 
       throw new Error(`A user with email '${data.email}' already exists.`);
     }
 
-    const updateData: { name: string; email: string; role: 'admin' | 'manager' | 'user'; password?: string } = {
+    const updateData: { name: string; email: string; role: string; password?: string } = {
       name: data.name,
       email: data.email,
       role: data.role,
@@ -324,6 +322,7 @@ export async function deleteUser(id: string, performedBy: string) {
           user: performedBy,
           action: 'DELETE_USER',
           details: `Deleted user '${userToDelete.name}'.`,
+          payload: userToDelete as any,
         }
       });
       revalidatePath('/users');
@@ -392,6 +391,7 @@ export async function deleteTanahGarapanEntry(id: string, userName: string) {
           user: userName,
           action: 'DELETE_TANAH_GARAPAN',
           details: `Deleted entry for '${entry.namaPemegangHak}' in '${entry.letakTanah}'.`,
+          payload: entry as any,
         }
       });
       revalidatePath('/tanah-garapan');
@@ -407,8 +407,6 @@ export async function deleteTanahGarapanEntry(id: string, userName: string) {
 }
 
 export async function exportTanahGarapanToCSV(): Promise<{ data?: string; error?: string }> {
-  // NOTE: This action is protected by UI logic that only shows the button to admins.
-  // For higher security, implement server-side session/role verification here.
   try {
     const entries = await prisma.tanahGarapanEntry.findMany({
       orderBy: { createdAt: 'desc' },
@@ -459,14 +457,11 @@ export async function exportTanahGarapanToCSV(): Promise<{ data?: string; error?
 export async function restoreData(logId: string, userName: string): Promise<{ success: boolean; message: string }> {
   const log = await prisma.activityLog.findUnique({ where: { id: logId } });
 
-  // The 'payload' property does not exist on the log object from the database,
-  // so this check will always fail, effectively disabling data restoration.
-  // This is a temporary measure to prevent crashes until the database schema can be updated.
-  if (!log || !(log as ActivityLog).payload) {
+  if (!log || !log.payload) {
     return { success: false, message: 'Log entry not found or no data to restore.' };
   }
   
-  const payload = (log as ActivityLog).payload;
+  const payload = log.payload as any;
 
   try {
     let restoredItemDetails = '';
@@ -497,7 +492,7 @@ export async function restoreData(logId: string, userName: string): Promise<{ su
         const hashedPassword = await bcrypt.hash(tempPassword, 10);
         const restoredUser = await prisma.user.create({
           data: {
-            ...restorableUserData,
+            ...(restorableUserData as any),
             password: hashedPassword,
           },
         });
@@ -508,7 +503,7 @@ export async function restoreData(logId: string, userName: string): Promise<{ su
       case 'DELETE_TANAH_GARAPAN': {
         const tgData = payload as TanahGarapanEntry;
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { id, createdAt, ...restorableTgData } = tgData;
+        const { id, createdAt, updatedAt, ...restorableTgData } = tgData;
         const restoredTg = await prisma.tanahGarapanEntry.create({
           data: restorableTgData,
         });
