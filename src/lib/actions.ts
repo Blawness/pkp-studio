@@ -153,7 +153,7 @@ export async function deleteCertificate(id: string, userName: string) {
           user: userName,
           action: 'DELETE_CERTIFICATE',
           details: `Deleted certificate '${certificate.no_sertifikat}'.`,
-          payload: certificate as any,
+          payload: certificate,
         }
       });
       revalidatePath('/certificates');
@@ -322,7 +322,7 @@ export async function deleteUser(id: string, performedBy: string) {
           user: performedBy,
           action: 'DELETE_USER',
           details: `Deleted user '${userToDelete.name}'.`,
-          payload: userToDelete as any,
+          payload: userToDelete,
         }
       });
       revalidatePath('/users');
@@ -391,7 +391,7 @@ export async function deleteTanahGarapanEntry(id: string, userName: string) {
           user: userName,
           action: 'DELETE_TANAH_GARAPAN',
           details: `Deleted entry for '${entry.namaPemegangHak}' in '${entry.letakTanah}'.`,
-          payload: entry as any,
+          payload: entry,
         }
       });
       revalidatePath('/tanah-garapan');

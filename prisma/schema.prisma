@@ -1,4 +1,7 @@
 
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
 datasource db {
   provider = "mysql"
   url      = env("DATABASE_URL")
@@ -43,13 +46,13 @@ model ActivityLog {
 }
 
 model TanahGarapanEntry {
-  id                            String   @id @default(cuid())
+  id                            String    @id @default(cuid())
   letakTanah                    String
   namaPemegangHak               String
   letterC                       String
   nomorSuratKeteranganGarapan   String
   luas                          Int
-  keterangan                    String?
-  createdAt                     DateTime @default(now())
-  updatedAt                     DateTime @updatedAt
+  keterangan                    String?   @db.Text
+  createdAt                     DateTime  @default(now())
+  updatedAt                     DateTime  @updatedAt
 }
