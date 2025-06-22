@@ -23,8 +23,8 @@ type SortableCertificateKey = 'kode' | 'nama_pemegang' | 'surat_hak' | 'no_serti
 
 interface CertificateTableProps {
   certificates: Certificate[];
-  onEdit: (certificate: Certificate) => void;
-  onDelete: (certificateId: string) => void;
+  onEdit?: (certificate: Certificate) => void;
+  onDelete?: (certificateId: string) => void;
   itemsPerPage?: number;
   showPagination?: boolean;
   caption?: string;
@@ -140,7 +140,7 @@ export function CertificateTable({
                 <TableCell className="px-4 py-2 text-center sm:text-left">{cert.nib}</TableCell>
                 <TableCell className="px-4 py-2 text-center sm:text-left">{format(new Date(cert.pendaftaran_pertama), 'dd MMM yyyy')}</TableCell>
                 <TableCell className="px-4 py-2 text-center">
-                  {cert.actions !== false && (
+                  {onEdit && onDelete && (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" className="h-8 w-8 p-0">

@@ -7,7 +7,7 @@ import { UserForm, type UserSubmitData } from '@/components/users/UserForm';
 import type { User } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, PlusCircle } from 'lucide-react';
+import { Search, PlusCircle, Loader2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -19,15 +19,23 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/contexts/AuthContext';
 import { getUsers, addUser, updateUser, deleteUser } from '@/lib/actions';
+import { useRouter } from 'next/navigation';
 
 export default function UsersPage() {
   const { toast } = useToast();
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, loading: authLoading } = useAuth();
+  const router = useRouter();
   const [users, setUsers] = useState<User[] | null>(null); 
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | undefined>(undefined);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!authLoading && currentUser && currentUser.role !== 'admin') {
+      router.push('/dashboard');
+    }
+  }, [currentUser, authLoading, router]);
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -45,8 +53,10 @@ export default function UsersPage() {
   }, [toast]);
 
   useEffect(() => {
-    fetchUsers();
-  }, [fetchUsers]);
+    if (currentUser?.role === 'admin') {
+      fetchUsers();
+    }
+  }, [fetchUsers, currentUser]);
 
   const filteredUsers = useMemo(() => {
     if (!users) return [];
@@ -103,6 +113,14 @@ export default function UsersPage() {
       setIsSubmitting(false);
     }
   }, [editingUser, toast, fetchUsers, currentUser]);
+
+  if (authLoading || !currentUser || currentUser.role !== 'admin') {
+    return (
+      <div className="flex h-full flex-1 items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   if (users === null) {
     return (

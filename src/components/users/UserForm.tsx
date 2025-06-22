@@ -95,7 +95,7 @@ export function UserForm({ onSubmit, initialData, isEditing = false, isSubmittin
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Role</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value as 'admin' | 'user'}>
+                <Select onValueChange={field.onChange} defaultValue={field.value as 'admin' | 'manager' | 'user'}>
                   <FormControl><SelectTrigger><SelectValue placeholder="Select a role" /></SelectTrigger></FormControl>
                   <SelectContent>
                     {USER_ROLE_OPTIONS.map(role => <SelectItem key={role} value={role}>{role.charAt(0).toUpperCase() + role.slice(1)}</SelectItem>)}

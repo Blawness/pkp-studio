@@ -38,6 +38,8 @@ export default function CertificatesPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [sortConfig, setSortConfig] = useState<{ key: SortableCertificateKey; direction: 'asc' | 'desc' } | null>(null);
 
+  const canManage = user?.role === 'admin' || user?.role === 'manager';
+
   const fetchCertificates = useCallback(async () => {
     try {
       const fetchedCertificates = await getCertificates();
@@ -112,7 +114,7 @@ export default function CertificatesPage() {
   }, []);
 
   const handleDeleteCertificate = useCallback(async (certificateId: string) => {
-    if (!user) return;
+    if (!user || !canManage) return;
     try {
       await deleteCertificate(certificateId, user.name || user.email);
       toast({ variant: "destructive", title: "Certificate Deleted", description: "Certificate has been removed." });
@@ -122,10 +124,10 @@ export default function CertificatesPage() {
       const errorMessage = error instanceof Error ? error.message : "Failed to delete certificate.";
       toast({ variant: "destructive", title: "Error", description: errorMessage });
     }
-  }, [toast, fetchCertificates, user]);
+  }, [toast, fetchCertificates, user, canManage]);
 
   const handleFormSubmit = useCallback(async (data: CertificateFormData) => {
-    if (!user) return;
+    if (!user || !canManage) return;
     setIsSubmitting(true);
     try {
       const userName = user.name || user.email;
@@ -146,7 +148,7 @@ export default function CertificatesPage() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [editingCertificate, toast, fetchCertificates, user]);
+  }, [editingCertificate, toast, fetchCertificates, user, canManage]);
   
   if (certificates === null) {
     return (
@@ -163,25 +165,27 @@ export default function CertificatesPage() {
     <div className="flex flex-col flex-1 space-y-8">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <h1 className="text-3xl font-headline font-semibold">Certificate Management</h1>
-        <Dialog open={isModalOpen} onOpenChange={(open) => { setIsModalOpen(open); if (!open) setEditingCertificate(undefined); }}>
-          <DialogTrigger asChild>
-            <Button onClick={handleAddCertificate} className="w-full sm:w-auto">
-              <PlusCircle className="mr-2 h-4 w-4" /> Add Certificate
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="font-headline">{editingCertificate ? 'Edit Certificate' : 'Add New Certificate'}</DialogTitle>
-              <DialogDescription>{editingCertificate ? 'Update certificate details.' : 'Fill in the form to add a new certificate.'}</DialogDescription>
-            </DialogHeader>
-            <CertificateForm
-              onSubmit={handleFormSubmit}
-              initialData={editingCertificate}
-              isSubmitting={isSubmitting}
-              onCancel={() => { setIsModalOpen(false); setEditingCertificate(undefined); }}
-            />
-          </DialogContent>
-        </Dialog>
+        {canManage && (
+          <Dialog open={isModalOpen} onOpenChange={(open) => { setIsModalOpen(open); if (!open) setEditingCertificate(undefined); }}>
+            <DialogTrigger asChild>
+              <Button onClick={handleAddCertificate} className="w-full sm:w-auto">
+                <PlusCircle className="mr-2 h-4 w-4" /> Add Certificate
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle className="font-headline">{editingCertificate ? 'Edit Certificate' : 'Add New Certificate'}</DialogTitle>
+                <DialogDescription>{editingCertificate ? 'Update certificate details.' : 'Fill in the form to add a new certificate.'}</DialogDescription>
+              </DialogHeader>
+              <CertificateForm
+                onSubmit={handleFormSubmit}
+                initialData={editingCertificate}
+                isSubmitting={isSubmitting}
+                onCancel={() => { setIsModalOpen(false); setEditingCertificate(undefined); }}
+              />
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
@@ -219,8 +223,8 @@ export default function CertificatesPage() {
       
       <CertificateTable
         certificates={filteredAndSortedCertificates}
-        onEdit={handleEditCertificate}
-        onDelete={handleDeleteCertificate}
+        onEdit={canManage ? handleEditCertificate : undefined}
+        onDelete={canManage ? handleDeleteCertificate : undefined}
         sortConfig={sortConfig}
         handleSort={handleSort}
       />

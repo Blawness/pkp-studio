@@ -8,7 +8,6 @@ import type { UserSubmitData } from '@/components/users/UserForm';
 import type { TanahGarapanFormData } from '@/components/tanah-garapan/TanahGarapanForm';
 import type { AuthUser } from './types';
 import bcrypt from 'bcryptjs';
-import { Prisma } from '@prisma/client';
 
 // --- AUTH ACTIONS ---
 export async function login(email: string, pass: string): Promise<AuthUser | null> {
@@ -18,7 +17,7 @@ export async function login(email: string, pass: string): Promise<AuthUser | nul
   const isPasswordValid = await bcrypt.compare(pass, user.password);
   if (!isPasswordValid) return null;
 
-  return { id: user.id, email: user.email, name: user.name, role: user.role as 'admin' | 'user' };
+  return { id: user.id, email: user.email, name: user.name, role: user.role };
 }
 
 // --- DASHBOARD ACTIONS ---
@@ -222,7 +221,7 @@ export async function updateUser(id: string, data: UserSubmitData, performedBy: 
       throw new Error(`A user with email '${data.email}' already exists.`);
     }
 
-    const updateData: { name: string; email: string; role: 'admin' | 'user'; password?: string } = {
+    const updateData: { name: string; email: string; role: 'admin' | 'manager' | 'user'; password?: string } = {
       name: data.name,
       email: data.email,
       role: data.role,

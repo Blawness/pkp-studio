@@ -41,6 +41,8 @@ export default function TanahGarapanPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeAccordionItem, setActiveAccordionItem] = useState<string | undefined>(undefined);
 
+  const canManage = user?.role === 'admin' || user?.role === 'manager';
+
   const fetchTanahGarapanEntries = useCallback(async () => {
     try {
       const fetchedEntries = await getTanahGarapanEntries();
@@ -90,7 +92,7 @@ export default function TanahGarapanPage() {
   }, []);
 
   const handleDeleteEntry = useCallback(async (entryId: string) => {
-    if (!user) return;
+    if (!user || !canManage) return;
     setIsSubmitting(true);
     try {
       await deleteTanahGarapanEntry(entryId, user.name || user.email);
@@ -102,10 +104,10 @@ export default function TanahGarapanPage() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [toast, fetchTanahGarapanEntries, user]);
+  }, [toast, fetchTanahGarapanEntries, user, canManage]);
 
   const handleFormSubmit = useCallback(async (data: TanahGarapanFormData) => {
-    if (!user) return;
+    if (!user || !canManage) return;
     setIsSubmitting(true);
     try {
       const userName = user.name || user.email;
@@ -126,7 +128,7 @@ export default function TanahGarapanPage() {
       setIsModalOpen(false);
       setEditingEntry(undefined);
     }
-  }, [editingEntry, toast, fetchTanahGarapanEntries, user]);
+  }, [editingEntry, toast, fetchTanahGarapanEntries, user, canManage]);
 
   if (entries === null) {
     return (
@@ -140,25 +142,27 @@ export default function TanahGarapanPage() {
     <div className="flex flex-col flex-1 space-y-8">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <h1 className="text-3xl font-headline font-semibold">Data Tanah Garapan</h1>
-        <Dialog open={isModalOpen} onOpenChange={(open) => { setIsModalOpen(open); if (!open) setEditingEntry(undefined); }}>
-          <DialogTrigger asChild>
-            <Button onClick={handleAddEntry}>
-              <PlusCircle className="mr-2 h-4 w-4" /> Tambah Data
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="font-headline">{editingEntry ? 'Edit Data' : 'Tambah Data Baru'}</DialogTitle>
-              <DialogDescription>{editingEntry ? 'Perbarui detail data.' : 'Isi formulir untuk menambah data baru.'}</DialogDescription>
-            </DialogHeader>
-            <TanahGarapanForm
-              onSubmit={handleFormSubmit}
-              initialData={editingEntry}
-              isSubmitting={isSubmitting}
-              onCancel={() => { setIsModalOpen(false); setEditingEntry(undefined); }}
-            />
-          </DialogContent>
-        </Dialog>
+        {canManage && (
+          <Dialog open={isModalOpen} onOpenChange={(open) => { setIsModalOpen(open); if (!open) setEditingEntry(undefined); }}>
+            <DialogTrigger asChild>
+              <Button onClick={handleAddEntry}>
+                <PlusCircle className="mr-2 h-4 w-4" /> Tambah Data
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle className="font-headline">{editingEntry ? 'Edit Data' : 'Tambah Data Baru'}</DialogTitle>
+                <DialogDescription>{editingEntry ? 'Perbarui detail data.' : 'Isi formulir untuk menambah data baru.'}</DialogDescription>
+              </DialogHeader>
+              <TanahGarapanForm
+                onSubmit={handleFormSubmit}
+                initialData={editingEntry}
+                isSubmitting={isSubmitting}
+                onCancel={() => { setIsModalOpen(false); setEditingEntry(undefined); }}
+              />
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
 
       {Object.keys(groupedData).length === 0 ? (
@@ -191,10 +195,12 @@ export default function TanahGarapanPage() {
                         <p><strong>Luas:</strong> {entry.luas.toLocaleString()} m²</p>
                         {entry.keterangan && <p><strong>Keterangan:</strong> {entry.keterangan}</p>}
                       </CardContent>
-                      <div className="flex justify-end gap-2 mt-3">
-                        <Button variant="outline" size="sm" onClick={() => handleEditEntry(entry)}><Edit3 className="mr-1 h-3 w-3" /> Edit</Button>
-                        <Button variant="destructive" size="sm" onClick={() => handleDeleteEntry(entry.id)}><Trash2 className="mr-1 h-3 w-3" /> Hapus</Button>
-                      </div>
+                      {canManage && (
+                        <div className="flex justify-end gap-2 mt-3">
+                          <Button variant="outline" size="sm" onClick={() => handleEditEntry(entry)}><Edit3 className="mr-1 h-3 w-3" /> Edit</Button>
+                          <Button variant="destructive" size="sm" onClick={() => handleDeleteEntry(entry.id)}><Trash2 className="mr-1 h-3 w-3" /> Hapus</Button>
+                        </div>
+                      )}
                     </Card>
                   ))}
                 </div>

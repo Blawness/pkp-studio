@@ -48,4 +48,4 @@ export const SURAT_HAK_OPTIONS = [
   "Hak Wakaf"
 ] as const;
 
-export const USER_ROLE_OPTIONS = ['admin', 'user'] as const;
+export const USER_ROLE_OPTIONS = ['admin', 'manager', 'user'] as const;

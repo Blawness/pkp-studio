@@ -11,7 +11,6 @@ export interface Certificate {
   surat_ukur: string;
   nib: string;
   pendaftaran_pertama: Date;
-  actions?: boolean;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -20,7 +19,7 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  role: 'admin' | 'user';
+  role: 'admin' | 'manager' | 'user';
   createdAt: Date;
 }
 
@@ -50,7 +49,7 @@ export interface AuthUser {
   id: string;
   email: string;
   name?: string;
-  role: 'admin' | 'user';
+  role: 'admin' | 'manager' | 'user';
 }
 
 export interface TanahGarapanEntry {
