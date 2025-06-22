@@ -42,6 +42,7 @@ export function SidebarNav() {
           {NAV_ITEMS.map((item) => {
             if (item.href === '/settings') return null; // Settings is now in footer
             if (item.href === '/users' && user?.role !== 'admin') return null;
+            if (item.href === '/logs' && user?.role === 'user') return null; // Hide logs for users
             return (
               <SidebarMenuItem key={item.title}>
                 <SidebarMenuButton

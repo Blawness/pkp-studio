@@ -2,20 +2,28 @@
 "use client";
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { LogTable } from '@/components/logs/LogTable';
 import type { ActivityLog } from '@/lib/types';
 import { Input } from '@/components/ui/input';
-import { Search } from 'lucide-react';
+import { Search, Loader2 } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { getLogs, restoreData } from '@/lib/actions';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function LogsPage() {
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  const router = useRouter();
   const [logs, setLogs] = useState<ActivityLog[] | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [restoringLogId, setRestoringLogId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!authLoading && user && user.role === 'user') {
+      router.push('/dashboard');
+    }
+  }, [user, authLoading, router]);
 
   const fetchLogs = useCallback(async () => {
     try {
@@ -33,8 +41,10 @@ export default function LogsPage() {
   }, [toast]);
 
   useEffect(() => {
-    fetchLogs();
-  }, [fetchLogs]);
+    if (user && user.role !== 'user') {
+      fetchLogs();
+    }
+  }, [fetchLogs, user]);
 
   const handleRestore = useCallback(async (logId: string) => {
     if (!user) return;
@@ -64,6 +74,14 @@ export default function LogsPage() {
     );
   }, [logs, searchTerm]);
 
+  if (authLoading || !user || user.role === 'user') {
+    return (
+      <div className="flex h-full flex-1 items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+  
   if (logs === null) {
     return (
       <div className="space-y-8">
