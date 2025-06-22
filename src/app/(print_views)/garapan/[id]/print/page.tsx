@@ -14,6 +14,7 @@ export default function TanahGarapanPrintPage({ params }: { params: { id: string
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
+  const [printDate, setPrintDate] = useState<Date | null>(null);
 
   useEffect(() => {
     const fetchEntry = async () => {
@@ -34,6 +35,10 @@ export default function TanahGarapanPrintPage({ params }: { params: { id: string
     };
     fetchEntry();
   }, [params.id, toast]);
+
+  useEffect(() => {
+    setPrintDate(new Date());
+  }, []);
 
   if (loading) {
     return (
@@ -99,7 +104,7 @@ export default function TanahGarapanPrintPage({ params }: { params: { id: string
         </section>
         
         <footer className="mt-16 pt-8 text-center text-sm text-gray-500 hidden print:block">
-          Dicetak pada: {format(new Date(), 'dd MMMM yyyy, HH:mm:ss', { locale: localeID })}
+          {printDate && `Dicetak pada: ${format(printDate, 'dd MMMM yyyy, HH:mm:ss', { locale: localeID })}`}
         </footer>
       </main>
     </div>
