@@ -1,3 +1,4 @@
+
 'use server';
 
 import { revalidatePath } from 'next/cache';
@@ -19,6 +20,17 @@ export async function getTanahGarapanEntryById(id: string) {
     throw new Error('Data tanah garapan tidak ditemukan');
   }
   return entry;
+}
+
+export async function getTanahGarapanEntriesByLetakTanah(letakTanah: string) {
+  const entries = await prisma.tanahGarapanEntry.findMany({
+    where: { letakTanah },
+    orderBy: { namaPemegangHak: 'asc' },
+  });
+  if (!entries || entries.length === 0) {
+    throw new Error(`Data tanah garapan untuk lokasi "${letakTanah}" tidak ditemukan`);
+  }
+  return entries;
 }
 
 export async function addTanahGarapanEntry(data: TanahGarapanFormData, userName: string) {

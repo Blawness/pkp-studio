@@ -179,11 +179,20 @@ export default function TanahGarapanPage() {
           {sortedGroupKeys.map((groupKey) => (
             <AccordionItem value={groupKey} key={groupKey} className="border rounded-lg shadow-sm bg-card">
               <AccordionTrigger className="px-6 py-4 hover:no-underline">
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between w-full">
-                    <span className="font-semibold text-lg">Letak Tanah: {groupKey}</span>
-                    <span className="text-sm text-muted-foreground md:ml-4">
-                        Total Luas: {groupedData[groupKey].totalLuas.toLocaleString()} m² ({groupedData[groupKey].entries.length} entri)
-                    </span>
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between w-full gap-2">
+                    <span className="font-semibold text-lg text-left">Letak Tanah: {groupKey}</span>
+                    <div className="flex items-center gap-4">
+                      <span className="text-sm text-muted-foreground md:ml-4 text-left md:text-right">
+                          Total Luas: {groupedData[groupKey].totalLuas.toLocaleString()} m² ({groupedData[groupKey].entries.length} entri)
+                      </span>
+                      {canManage && (
+                        <Button asChild variant="outline" size="sm" onClick={(e) => e.stopPropagation()}>
+                          <Link href={`/garapan/print/group/${encodeURIComponent(groupKey)}`} target="_blank" rel="noopener noreferrer">
+                            <Printer className="mr-1 h-3 w-3" /> Cetak Grup
+                          </Link>
+                        </Button>
+                      )}
+                    </div>
                 </div>
               </AccordionTrigger>
               <AccordionContent className="px-6 pb-4 pt-0">
