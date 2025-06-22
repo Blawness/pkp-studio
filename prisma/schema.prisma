@@ -35,7 +35,6 @@ model User {
   createdAt  DateTime     @default(now())
   attendance Attendance[]
 
-  @@map("users")
 }
 
 model ActivityLog {
