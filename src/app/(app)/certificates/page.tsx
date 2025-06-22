@@ -22,6 +22,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/contexts/AuthContext';
 import { SURAT_HAK_OPTIONS, KODE_CERTIFICATE_OPTIONS } from '@/lib/constants';
 import { getCertificates, addCertificate, updateCertificate, deleteCertificate } from '@/lib/actions';
+import { ExportButton } from '@/components/certificates/ExportButton';
 
 type SortableCertificateKey = 'kode' | 'nama_pemegang' | 'surat_hak' | 'no_sertifikat' | 'luas_m2' | 'tgl_terbit';
 
@@ -165,27 +166,30 @@ export default function CertificatesPage() {
     <div className="flex flex-col flex-1 space-y-8">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <h1 className="text-3xl font-headline font-semibold">Certificate Management</h1>
-        {canManage && (
-          <Dialog open={isModalOpen} onOpenChange={(open) => { setIsModalOpen(open); if (!open) setEditingCertificate(undefined); }}>
-            <DialogTrigger asChild>
-              <Button onClick={handleAddCertificate} className="w-full sm:w-auto">
-                <PlusCircle className="mr-2 h-4 w-4" /> Add Certificate
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle className="font-headline">{editingCertificate ? 'Edit Certificate' : 'Add New Certificate'}</DialogTitle>
-                <DialogDescription>{editingCertificate ? 'Update certificate details.' : 'Fill in the form to add a new certificate.'}</DialogDescription>
-              </DialogHeader>
-              <CertificateForm
-                onSubmit={handleFormSubmit}
-                initialData={editingCertificate}
-                isSubmitting={isSubmitting}
-                onCancel={() => { setIsModalOpen(false); setEditingCertificate(undefined); }}
-              />
-            </DialogContent>
-          </Dialog>
-        )}
+        <div className="flex items-center gap-2">
+          {canManage && (
+            <Dialog open={isModalOpen} onOpenChange={(open) => { setIsModalOpen(open); if (!open) setEditingCertificate(undefined); }}>
+              <DialogTrigger asChild>
+                <Button onClick={handleAddCertificate} className="w-full sm:w-auto">
+                  <PlusCircle className="mr-2 h-4 w-4" /> Add Certificate
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle className="font-headline">{editingCertificate ? 'Edit Certificate' : 'Add New Certificate'}</DialogTitle>
+                  <DialogDescription>{editingCertificate ? 'Update certificate details.' : 'Fill in the form to add a new certificate.'}</DialogDescription>
+                </DialogHeader>
+                <CertificateForm
+                  onSubmit={handleFormSubmit}
+                  initialData={editingCertificate}
+                  isSubmitting={isSubmitting}
+                  onCancel={() => { setIsModalOpen(false); setEditingCertificate(undefined); }}
+                />
+              </DialogContent>
+            </Dialog>
+          )}
+          <ExportButton />
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">

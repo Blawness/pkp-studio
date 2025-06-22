@@ -101,17 +101,17 @@ export async function addCertificate(data: CertificateFormData, userName: string
 
 export async function updateCertificate(id: string, data: CertificateFormData, userName: string) {
   try {
-    const conflictingSertifikat = await prisma.certificate.findUnique({
-      where: { no_sertifikat: data.no_sertifikat },
+    const conflictingSertifikat = await prisma.certificate.findFirst({
+      where: { no_sertifikat: data.no_sertifikat, id: { not: id } },
     });
-    if (conflictingSertifikat && conflictingSertifikat.id !== id) {
+    if (conflictingSertifikat) {
       throw new Error(`A certificate with number '${data.no_sertifikat}' already exists.`);
     }
 
-    const conflictingNIB = await prisma.certificate.findUnique({
-      where: { nib: data.nib },
+    const conflictingNIB = await prisma.certificate.findFirst({
+      where: { nib: data.nib, id: { not: id } },
     });
-    if (conflictingNIB && conflictingNIB.id !== id) {
+    if (conflictingNIB) {
       throw new Error(`A certificate with NIB '${data.nib}' already exists.`);
     }
 
@@ -164,6 +164,63 @@ export async function deleteCertificate(id: string, userName: string) {
   }
 }
 
+export async function exportCertificatesToCSV(): Promise<{ data?: string; error?: string }> {
+  // NOTE: This action is protected by UI logic that only shows the button to admins.
+  // In a production app with higher security needs, you would implement
+  // server-side session/role verification here.
+  try {
+    const certificates = await prisma.certificate.findMany({
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (certificates.length === 0) {
+      return { error: 'No certificates to export.' };
+    }
+
+    const headers = [
+      'ID', 'Kode', 'Nama Pemegang Hak', 'Surat Hak', 'No Sertifikat',
+      'Lokasi Tanah', 'Luas (m2)', 'Tanggal Terbit', 'Surat Ukur', 'NIB',
+      'Pendaftaran Pertama', 'Dibuat Pada', 'Diperbarui Pada'
+    ];
+
+    const escapeCsvField = (field: any) => {
+      if (field === null || field === undefined) {
+        return '';
+      }
+      const stringField = String(field);
+      if (/[",\n]/.test(stringField)) {
+        return `"${stringField.replace(/"/g, '""')}"`;
+      }
+      return stringField;
+    };
+
+    const csvRows = certificates.map(cert => {
+      const row = [
+        cert.id,
+        cert.kode,
+        Array.isArray(cert.nama_pemegang) ? cert.nama_pemegang.join('; ') : '',
+        cert.surat_hak,
+        cert.no_sertifikat,
+        cert.lokasi_tanah,
+        cert.luas_m2,
+        cert.tgl_terbit.toISOString(),
+        cert.surat_ukur,
+        cert.nib,
+        cert.pendaftaran_pertama.toISOString(),
+        cert.createdAt?.toISOString() ?? '',
+        cert.updatedAt?.toISOString() ?? ''
+      ];
+      return row.map(escapeCsvField).join(',');
+    });
+
+    const csvString = [headers.join(','), ...csvRows].join('\n');
+    return { data: csvString };
+  } catch (error) {
+    console.error('Failed to export certificates:', error);
+    return { error: 'An unexpected error occurred during the export.' };
+  }
+}
+
 // --- USER ACTIONS ---
 export async function getUsers() {
   return prisma.user.findMany({
@@ -213,11 +270,11 @@ export async function addUser(data: UserSubmitData, performedBy: string) {
 
 export async function updateUser(id: string, data: UserSubmitData, performedBy: string) {
   try {
-    const conflictingUser = await prisma.user.findUnique({
-      where: { email: data.email },
+    const conflictingUser = await prisma.user.findFirst({
+      where: { email: data.email, id: { not: id } },
     });
 
-    if (conflictingUser && conflictingUser.id !== id) {
+    if (conflictingUser) {
       throw new Error(`A user with email '${data.email}' already exists.`);
     }
 
