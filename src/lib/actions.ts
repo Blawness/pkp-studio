@@ -465,6 +465,11 @@ export async function getTodaysAttendanceForUser(userId: string) {
         date: today,
       },
     },
+    include: {
+      user: {
+        select: { id: true, name: true },
+      },
+    },
   });
 }
 
@@ -473,6 +478,11 @@ export async function getUserAttendanceHistory(userId: string) {
     where: { userId },
     orderBy: { date: 'desc' },
     take: 30, // Limit to last 30 entries
+    include: {
+      user: {
+        select: { id: true, name: true },
+      },
+    },
   });
 }
 
