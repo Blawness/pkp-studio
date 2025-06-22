@@ -42,7 +42,7 @@ export const KODE_CERTIFICATE_OPTIONS = ["LPN01", "PKP01"] as const;
 export const SURAT_HAK_OPTIONS = [
   "SHM",
   "Hak Guna Usaha",
-  "Hak Guna Bangunana",
+  "Hak Guna Bangunan",
   "Hak Pakai",
   "Hak Pengelolaan",
   "Hak Wakaf"
