@@ -36,8 +36,9 @@ export function LogTable({ logs, itemsPerPage = 20, onRestore, restoringLogId }:
     setCurrentPage(page);
   };
 
-  const canBeRestored = (action: string) => {
-    return ['DELETE_CERTIFICATE', 'DELETE_USER', 'DELETE_TANAH_GARAPAN'].includes(action);
+  const canBeRestored = (log: ActivityLog) => {
+    const recoverableActions = ['DELETE_CERTIFICATE', 'DELETE_USER', 'DELETE_TANAH_GARAPAN'];
+    return recoverableActions.includes(log.action) && log.payload;
   };
 
   const tableHeaders = ["No", "User", "Action", "Details", "Timestamp", "Actions"];
@@ -63,7 +64,7 @@ export function LogTable({ logs, itemsPerPage = 20, onRestore, restoringLogId }:
                 <TableCell className="px-4 py-2 text-center sm:text-left">{log.details}</TableCell>
                 <TableCell className="px-4 py-2 text-center sm:text-left">{format(new Date(log.timestamp), 'dd MMM yyyy, HH:mm:ss')}</TableCell>
                 <TableCell className="px-4 py-2 text-center">
-                  {onRestore && canBeRestored(log.action) && log.payload && (
+                  {onRestore && canBeRestored(log) && (
                     <Button
                       variant="outline"
                       size="sm"

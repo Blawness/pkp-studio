@@ -29,7 +29,7 @@ export interface ActivityLog {
   action: string;
   details: string;
   timestamp: Date;
-  payload?: any;
+  payload?: any; // This type is for client-side use, it doesn't represent the DB schema accurately
 }
 
 export interface StatCardData {

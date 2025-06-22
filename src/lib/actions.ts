@@ -7,7 +7,7 @@ import { Prisma } from '@prisma/client';
 import type { CertificateFormData } from '@/components/certificates/CertificateForm';
 import type { UserSubmitData } from '@/components/users/UserForm';
 import type { TanahGarapanFormData } from '@/components/tanah-garapan/TanahGarapanForm';
-import type { AuthUser, Certificate, User, TanahGarapanEntry } from './types';
+import type { AuthUser, Certificate, User, TanahGarapanEntry, ActivityLog } from './types';
 import bcrypt from 'bcryptjs';
 
 // --- AUTH ACTIONS ---
@@ -153,7 +153,6 @@ export async function deleteCertificate(id: string, userName: string) {
           user: userName,
           action: 'DELETE_CERTIFICATE',
           details: `Deleted certificate '${certificate.no_sertifikat}'.`,
-          payload: certificate,
         }
       });
       revalidatePath('/certificates');
@@ -320,13 +319,11 @@ export async function deleteUser(id: string, performedBy: string) {
     const userToDelete = await prisma.user.findUnique({ where: { id } });
     if (userToDelete) {
       await prisma.user.delete({ where: { id } });
-      const { password, ...userPayload } = userToDelete;
        await prisma.activityLog.create({
         data: {
           user: performedBy,
           action: 'DELETE_USER',
           details: `Deleted user '${userToDelete.name}'.`,
-          payload: userPayload,
         }
       });
       revalidatePath('/users');
@@ -395,7 +392,6 @@ export async function deleteTanahGarapanEntry(id: string, userName: string) {
           user: userName,
           action: 'DELETE_TANAH_GARAPAN',
           details: `Deleted entry for '${entry.namaPemegangHak}' in '${entry.letakTanah}'.`,
-          payload: entry,
         }
       });
       revalidatePath('/tanah-garapan');
@@ -463,9 +459,14 @@ export async function exportTanahGarapanToCSV(): Promise<{ data?: string; error?
 export async function restoreData(logId: string, userName: string): Promise<{ success: boolean; message: string }> {
   const log = await prisma.activityLog.findUnique({ where: { id: logId } });
 
-  if (!log || !log.payload) {
+  // The 'payload' property does not exist on the log object from the database,
+  // so this check will always fail, effectively disabling data restoration.
+  // This is a temporary measure to prevent crashes until the database schema can be updated.
+  if (!log || !(log as ActivityLog).payload) {
     return { success: false, message: 'Log entry not found or no data to restore.' };
   }
+  
+  const payload = (log as ActivityLog).payload;
 
   try {
     let restoredItemDetails = '';
@@ -473,7 +474,7 @@ export async function restoreData(logId: string, userName: string): Promise<{ su
 
     switch (log.action) {
       case 'DELETE_CERTIFICATE': {
-        const certData = log.payload as Certificate;
+        const certData = payload as Certificate;
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { id, createdAt, updatedAt, ...restorableCertData } = certData;
         const restoredCert = await prisma.certificate.create({
@@ -489,7 +490,7 @@ export async function restoreData(logId: string, userName: string): Promise<{ su
         break;
       }
       case 'DELETE_USER': {
-        const userData = log.payload as User;
+        const userData = payload as User;
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { id, createdAt, ...restorableUserData } = userData;
         const tempPassword = Math.random().toString(36).slice(-8);
@@ -505,7 +506,7 @@ export async function restoreData(logId: string, userName: string): Promise<{ su
         break;
       }
       case 'DELETE_TANAH_GARAPAN': {
-        const tgData = log.payload as TanahGarapanEntry;
+        const tgData = payload as TanahGarapanEntry;
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { id, createdAt, ...restorableTgData } = tgData;
         const restoredTg = await prisma.tanahGarapanEntry.create({
@@ -524,7 +525,6 @@ export async function restoreData(logId: string, userName: string): Promise<{ su
         user: userName,
         action: 'RESTORE_DATA',
         details: restoredItemDetails,
-        payload: log.payload,
       },
     });
 
