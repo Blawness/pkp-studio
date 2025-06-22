@@ -3,6 +3,7 @@
 
 import React, { useState, useMemo, useCallback } from 'react';
 import type { Certificate } from '@/lib/types';
+import Link from 'next/link';
 import {
   Table,
   TableBody,
@@ -15,8 +16,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { DataTablePagination } from '@/components/shared/DataTablePagination';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, FilePenLine, Trash2, ArrowDown, ArrowUp, ChevronsUpDown } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
+import { MoreHorizontal, FilePenLine, Trash2, ArrowDown, ArrowUp, ChevronsUpDown, Printer } from 'lucide-react';
 import { format } from 'date-fns';
 
 type SortableCertificateKey = 'kode' | 'nama_pemegang' | 'surat_hak' | 'no_sertifikat' | 'luas_m2' | 'tgl_terbit';
@@ -149,6 +150,13 @@ export function CertificateTable({
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
+                        <DropdownMenuItem onSelect={(e) => e.preventDefault()} asChild>
+                          <Link href={`/certificates/${cert.id}/print`} target="_blank" rel="noopener noreferrer" className="flex items-center w-full">
+                            <Printer className="mr-2 h-4 w-4" />
+                            <span>Preview PDF</span>
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={() => onEdit(cert)}>
                           <FilePenLine className="mr-2 h-4 w-4" /> Edit
                         </DropdownMenuItem>

@@ -11,6 +11,16 @@ export async function getCertificates() {
   });
 }
 
+export async function getCertificateById(id: string) {
+  const certificate = await prisma.certificate.findUnique({
+    where: { id },
+  });
+  if (!certificate) {
+    throw new Error('Certificate not found');
+  }
+  return certificate;
+}
+
 export async function addCertificate(data: CertificateFormData, userName: string) {
   try {
     const existingBySertifikat = await prisma.certificate.findUnique({
