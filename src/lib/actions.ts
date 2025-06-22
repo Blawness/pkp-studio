@@ -60,11 +60,18 @@ export async function getCertificates() {
 
 export async function addCertificate(data: CertificateFormData, userName: string) {
   try {
-    const existing = await prisma.certificate.findUnique({
+    const existingBySertifikat = await prisma.certificate.findUnique({
       where: { no_sertifikat: data.no_sertifikat },
     });
-    if (existing) {
+    if (existingBySertifikat) {
       throw new Error(`A certificate with number '${data.no_sertifikat}' already exists.`);
+    }
+    
+    const existingByNIB = await prisma.certificate.findUnique({
+      where: { nib: data.nib },
+    });
+    if (existingByNIB) {
+      throw new Error(`A certificate with NIB '${data.nib}' already exists.`);
     }
 
     const namesArray = data.nama_pemegang.split(',').map(name => name.trim()).filter(name => name.length > 0);
@@ -95,12 +102,18 @@ export async function addCertificate(data: CertificateFormData, userName: string
 
 export async function updateCertificate(id: string, data: CertificateFormData, userName: string) {
   try {
-    const conflictingCertificate = await prisma.certificate.findUnique({
+    const conflictingSertifikat = await prisma.certificate.findUnique({
       where: { no_sertifikat: data.no_sertifikat },
     });
-
-    if (conflictingCertificate && conflictingCertificate.id !== id) {
+    if (conflictingSertifikat && conflictingSertifikat.id !== id) {
       throw new Error(`A certificate with number '${data.no_sertifikat}' already exists.`);
+    }
+
+    const conflictingNIB = await prisma.certificate.findUnique({
+      where: { nib: data.nib },
+    });
+    if (conflictingNIB && conflictingNIB.id !== id) {
+      throw new Error(`A certificate with NIB '${data.nib}' already exists.`);
     }
 
     const namesArray = data.nama_pemegang.split(',').map(name => name.trim()).filter(name => name.length > 0);
