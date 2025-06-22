@@ -29,6 +29,7 @@ export interface ActivityLog {
   action: string;
   details: string;
   timestamp: Date;
+  payload?: any;
 }
 
 export interface StatCardData {

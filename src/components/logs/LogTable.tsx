@@ -13,13 +13,17 @@ import {
 } from '@/components/ui/table';
 import { DataTablePagination } from '@/components/shared/DataTablePagination';
 import { format } from 'date-fns';
+import { Button } from '@/components/ui/button';
+import { History, Loader2 } from 'lucide-react';
 
 interface LogTableProps {
   logs: ActivityLog[];
   itemsPerPage?: number;
+  onRestore?: (logId: string) => void;
+  restoringLogId?: string | null;
 }
 
-export function LogTable({ logs, itemsPerPage = 20 }: LogTableProps) {
+export function LogTable({ logs, itemsPerPage = 20, onRestore, restoringLogId }: LogTableProps) {
   const [currentPage, setCurrentPage] = useState(1);
 
   const totalPages = Math.ceil(logs.length / itemsPerPage);
@@ -32,7 +36,11 @@ export function LogTable({ logs, itemsPerPage = 20 }: LogTableProps) {
     setCurrentPage(page);
   };
 
-  const tableHeaders = ["No", "User", "Action", "Details", "Timestamp"];
+  const canBeRestored = (action: string) => {
+    return ['DELETE_CERTIFICATE', 'DELETE_USER', 'DELETE_TANAH_GARAPAN'].includes(action);
+  };
+
+  const tableHeaders = ["No", "User", "Action", "Details", "Timestamp", "Actions"];
 
   return (
     <div className="rounded-xl border shadow-xs">
@@ -54,6 +62,23 @@ export function LogTable({ logs, itemsPerPage = 20 }: LogTableProps) {
                 <TableCell className="px-4 py-2 text-center sm:text-left">{log.action}</TableCell>
                 <TableCell className="px-4 py-2 text-center sm:text-left">{log.details}</TableCell>
                 <TableCell className="px-4 py-2 text-center sm:text-left">{format(new Date(log.timestamp), 'dd MMM yyyy, HH:mm:ss')}</TableCell>
+                <TableCell className="px-4 py-2 text-center">
+                  {onRestore && canBeRestored(log.action) && log.payload && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onRestore(log.id)}
+                      disabled={restoringLogId === log.id}
+                    >
+                      {restoringLogId === log.id ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <History className="mr-2 h-4 w-4" />
+                      )}
+                      Restore
+                    </Button>
+                  )}
+                </TableCell>
               </TableRow>
             ))}
             {currentLogs.length === 0 && (

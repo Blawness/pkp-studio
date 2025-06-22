@@ -3,10 +3,11 @@
 
 import { revalidatePath } from 'next/cache';
 import prisma from './prisma';
+import { Prisma } from '@prisma/client';
 import type { CertificateFormData } from '@/components/certificates/CertificateForm';
 import type { UserSubmitData } from '@/components/users/UserForm';
 import type { TanahGarapanFormData } from '@/components/tanah-garapan/TanahGarapanForm';
-import type { AuthUser } from './types';
+import type { AuthUser, Certificate, User, TanahGarapanEntry } from './types';
 import bcrypt from 'bcryptjs';
 
 // --- AUTH ACTIONS ---
@@ -152,6 +153,7 @@ export async function deleteCertificate(id: string, userName: string) {
           user: userName,
           action: 'DELETE_CERTIFICATE',
           details: `Deleted certificate '${certificate.no_sertifikat}'.`,
+          payload: certificate,
         }
       });
       revalidatePath('/certificates');
@@ -312,14 +314,16 @@ export async function updateUser(id: string, data: UserSubmitData, performedBy: 
 
 export async function deleteUser(id: string, performedBy: string) {
   try {
-    const user = await prisma.user.findUnique({ where: { id } });
-    if (user) {
+    const userToDelete = await prisma.user.findUnique({ where: { id } });
+    if (userToDelete) {
       await prisma.user.delete({ where: { id } });
+      const { password, ...userPayload } = userToDelete;
        await prisma.activityLog.create({
         data: {
           user: performedBy,
           action: 'DELETE_USER',
-          details: `Deleted user '${user.name}'.`,
+          details: `Deleted user '${userToDelete.name}'.`,
+          payload: userPayload,
         }
       });
       revalidatePath('/users');
@@ -384,6 +388,7 @@ export async function deleteTanahGarapanEntry(id: string, userName: string) {
         user: userName,
         action: 'DELETE_TANAH_GARAPAN',
         details: `Deleted entry for '${entry.namaPemegangHak}' in '${entry.letakTanah}'.`,
+        payload: entry,
       }
     });
     revalidatePath('/tanah-garapan');
@@ -437,5 +442,90 @@ export async function exportTanahGarapanToCSV(): Promise<{ data?: string; error?
   } catch (error) {
     console.error('Failed to export Tanah Garapan data:', error);
     return { error: 'An unexpected error occurred during the export.' };
+  }
+}
+
+// --- DATA RECOVERY ---
+export async function restoreData(logId: string, userName: string): Promise<{ success: boolean; message: string }> {
+  const log = await prisma.activityLog.findUnique({ where: { id: logId } });
+
+  if (!log || !log.payload) {
+    return { success: false, message: 'Log entry not found or no data to restore.' };
+  }
+
+  try {
+    let restoredItemDetails = '';
+    const revalidationPaths: string[] = [];
+
+    switch (log.action) {
+      case 'DELETE_CERTIFICATE': {
+        const certData = log.payload as Certificate;
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { id, createdAt, updatedAt, ...restorableCertData } = certData;
+        const restoredCert = await prisma.certificate.create({
+          data: {
+            ...restorableCertData,
+            nama_pemegang: Array.isArray(restorableCertData.nama_pemegang) ? restorableCertData.nama_pemegang : [],
+            tgl_terbit: new Date(restorableCertData.tgl_terbit),
+            pendaftaran_pertama: new Date(restorableCertData.pendaftaran_pertama),
+          },
+        });
+        restoredItemDetails = `Restored certificate '${restoredCert.no_sertifikat}'.`;
+        revalidationPaths.push('/certificates', '/dashboard', '/logs');
+        break;
+      }
+      case 'DELETE_USER': {
+        const userData = log.payload as User;
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { id, createdAt, ...restorableUserData } = userData;
+        const tempPassword = Math.random().toString(36).slice(-8);
+        const hashedPassword = await bcrypt.hash(tempPassword, 10);
+        const restoredUser = await prisma.user.create({
+          data: {
+            ...restorableUserData,
+            password: hashedPassword,
+          },
+        });
+        restoredItemDetails = `Restored user '${restoredUser.name}'. A new temporary password was set.`;
+        revalidationPaths.push('/users', '/dashboard', '/logs');
+        break;
+      }
+      case 'DELETE_TANAH_GARAPAN': {
+        const tgData = log.payload as TanahGarapanEntry;
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { id, createdAt, ...restorableTgData } = tgData;
+        const restoredTg = await prisma.tanahGarapanEntry.create({
+          data: restorableTgData,
+        });
+        restoredItemDetails = `Restored Tanah Garapan entry for '${restoredTg.namaPemegangHak}'.`;
+        revalidationPaths.push('/tanah-garapan', '/logs');
+        break;
+      }
+      default:
+        return { success: false, message: 'This log entry is not a recoverable deletion.' };
+    }
+
+    await prisma.activityLog.create({
+      data: {
+        user: userName,
+        action: 'RESTORE_DATA',
+        details: restoredItemDetails,
+        payload: log.payload,
+      },
+    });
+
+    for (const path of revalidationPaths) {
+      revalidatePath(path);
+    }
+
+    return { success: true, message: 'Data restored successfully.' };
+
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      const target = (error.meta as { target?: string[] })?.target?.join(', ');
+      return { success: false, message: `Restore failed: An item with the same unique value (${target}) already exists.` };
+    }
+    console.error("Restore Data Error:", error);
+    return { success: false, message: 'An unexpected error occurred during restoration.' };
   }
 }

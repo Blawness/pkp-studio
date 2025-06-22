@@ -7,12 +7,15 @@ import type { ActivityLog } from '@/lib/types';
 import { Input } from '@/components/ui/input';
 import { Search } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
-import { getLogs } from '@/lib/actions';
+import { getLogs, restoreData } from '@/lib/actions';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function LogsPage() {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [logs, setLogs] = useState<ActivityLog[] | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [restoringLogId, setRestoringLogId] = useState<string | null>(null);
 
   const fetchLogs = useCallback(async () => {
     try {
@@ -32,6 +35,25 @@ export default function LogsPage() {
   useEffect(() => {
     fetchLogs();
   }, [fetchLogs]);
+
+  const handleRestore = useCallback(async (logId: string) => {
+    if (!user) return;
+    setRestoringLogId(logId);
+    try {
+      const result = await restoreData(logId, user.name || user.email);
+      if (result.success) {
+        toast({ title: "Success", description: result.message });
+        fetchLogs(); // Refresh logs to show the restore action log
+      } else {
+        toast({ variant: "destructive", title: "Restore Failed", description: result.message });
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred.";
+      toast({ variant: "destructive", title: "Error", description: errorMessage });
+    } finally {
+      setRestoringLogId(null);
+    }
+  }, [user, toast, fetchLogs]);
 
   const filteredLogs = useMemo(() => {
     if (!logs) return [];
@@ -53,6 +75,8 @@ export default function LogsPage() {
     );
   }
 
+  const canManage = user?.role === 'admin' || user?.role === 'manager';
+
   return (
     <div className="space-y-8">
       <h1 className="text-3xl font-headline font-semibold">Activity Logs</h1>
@@ -68,7 +92,12 @@ export default function LogsPage() {
         />
       </div>
 
-      <LogTable logs={filteredLogs} itemsPerPage={20} />
+      <LogTable 
+        logs={filteredLogs} 
+        itemsPerPage={20}
+        onRestore={canManage ? handleRestore : undefined}
+        restoringLogId={restoringLogId}
+      />
     </div>
   );
 }
