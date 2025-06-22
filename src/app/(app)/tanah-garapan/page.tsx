@@ -22,6 +22,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { TanahGarapanForm, type TanahGarapanFormData } from '@/components/tanah-garapan/TanahGarapanForm';
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from '@/contexts/AuthContext';
 import { getTanahGarapanEntries, addTanahGarapanEntry, updateTanahGarapanEntry, deleteTanahGarapanEntry } from '@/lib/actions';
 
 interface GroupedTanahGarapanData {
@@ -33,6 +34,7 @@ interface GroupedTanahGarapanData {
 
 export default function TanahGarapanPage() {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [entries, setEntries] = useState<TanahGarapanEntry[] | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<TanahGarapanEntry | undefined>(undefined);
@@ -88,9 +90,10 @@ export default function TanahGarapanPage() {
   }, []);
 
   const handleDeleteEntry = useCallback(async (entryId: string) => {
+    if (!user) return;
     setIsSubmitting(true);
     try {
-      await deleteTanahGarapanEntry(entryId);
+      await deleteTanahGarapanEntry(entryId, user.name || user.email);
       toast({ variant: "destructive", title: "Data Dihapus", description: `Data tanah garapan telah dihapus.` });
       fetchTanahGarapanEntries();
     } catch (error) {
@@ -99,16 +102,18 @@ export default function TanahGarapanPage() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [toast, fetchTanahGarapanEntries]);
+  }, [toast, fetchTanahGarapanEntries, user]);
 
   const handleFormSubmit = useCallback(async (data: TanahGarapanFormData) => {
+    if (!user) return;
     setIsSubmitting(true);
     try {
+      const userName = user.name || user.email;
       if (editingEntry) {
-        await updateTanahGarapanEntry(editingEntry.id, data);
+        await updateTanahGarapanEntry(editingEntry.id, data, userName);
         toast({ title: "Data Diperbarui", description: `Data untuk ${data.letakTanah} telah diperbarui.` });
       } else {
-        await addTanahGarapanEntry(data);
+        await addTanahGarapanEntry(data, userName);
         toast({ title: "Data Ditambahkan", description: `Data baru untuk ${data.letakTanah} telah ditambahkan.` });
         setActiveAccordionItem(data.letakTanah);
       }
@@ -121,7 +126,7 @@ export default function TanahGarapanPage() {
       setIsModalOpen(false);
       setEditingEntry(undefined);
     }
-  }, [editingEntry, toast, fetchTanahGarapanEntries]);
+  }, [editingEntry, toast, fetchTanahGarapanEntries, user]);
 
   if (entries === null) {
     return (

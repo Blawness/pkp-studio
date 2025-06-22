@@ -17,10 +17,12 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from '@/contexts/AuthContext';
 import { getUsers, addUser, updateUser, deleteUser } from '@/lib/actions';
 
 export default function UsersPage() {
   const { toast } = useToast();
+  const { user: currentUser } = useAuth();
   const [users, setUsers] = useState<User[] | null>(null); 
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -66,8 +68,9 @@ export default function UsersPage() {
   };
 
   const handleDeleteUser = useCallback(async (userId: string) => {
+    if (!currentUser) return;
     try {
-      await deleteUser(userId);
+      await deleteUser(userId, currentUser.name || currentUser.email);
       toast({ variant: "destructive", title: "User Deleted", description: `User has been removed.` });
       fetchUsers();
     } catch (error) {
@@ -75,16 +78,18 @@ export default function UsersPage() {
       const errorMessage = error instanceof Error ? error.message : "Failed to delete user.";
       toast({ variant: "destructive", title: "Error", description: errorMessage });
     }
-  }, [toast, fetchUsers]);
+  }, [toast, fetchUsers, currentUser]);
 
   const handleFormSubmit = useCallback(async (data: UserSubmitData) => {
+    if (!currentUser) return;
     setIsSubmitting(true);
     try {
+      const userName = currentUser.name || currentUser.email;
       if (editingUser) {
-        await updateUser(editingUser.id, data);
+        await updateUser(editingUser.id, data, userName);
         toast({ title: "User Updated", description: `User ${data.name} has been updated.` });
       } else {
-        await addUser(data);
+        await addUser(data, userName);
         toast({ title: "User Added", description: `User ${data.name} has been added.` });
       }
       fetchUsers();
@@ -97,7 +102,7 @@ export default function UsersPage() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [editingUser, toast, fetchUsers]);
+  }, [editingUser, toast, fetchUsers, currentUser]);
 
   if (users === null) {
     return (

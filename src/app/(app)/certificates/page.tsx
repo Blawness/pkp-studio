@@ -19,6 +19,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from '@/contexts/AuthContext';
 import { SURAT_HAK_OPTIONS, KODE_CERTIFICATE_OPTIONS } from '@/lib/constants';
 import { getCertificates, addCertificate, updateCertificate, deleteCertificate } from '@/lib/actions';
 
@@ -26,6 +27,7 @@ type SortableCertificateKey = 'kode' | 'nama_pemegang' | 'surat_hak' | 'no_serti
 
 export default function CertificatesPage() {
   const { toast } = useToast();
+  const { user } = useAuth();
   
   const [certificates, setCertificates] = useState<Certificate[] | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -110,8 +112,9 @@ export default function CertificatesPage() {
   }, []);
 
   const handleDeleteCertificate = useCallback(async (certificateId: string) => {
+    if (!user) return;
     try {
-      await deleteCertificate(certificateId);
+      await deleteCertificate(certificateId, user.name || user.email);
       toast({ variant: "destructive", title: "Certificate Deleted", description: "Certificate has been removed." });
       fetchCertificates(); // Refresh data
     } catch (error) {
@@ -119,16 +122,18 @@ export default function CertificatesPage() {
       const errorMessage = error instanceof Error ? error.message : "Failed to delete certificate.";
       toast({ variant: "destructive", title: "Error", description: errorMessage });
     }
-  }, [toast, fetchCertificates]);
+  }, [toast, fetchCertificates, user]);
 
   const handleFormSubmit = useCallback(async (data: CertificateFormData) => {
+    if (!user) return;
     setIsSubmitting(true);
     try {
+      const userName = user.name || user.email;
       if (editingCertificate) {
-        await updateCertificate(editingCertificate.id, data);
+        await updateCertificate(editingCertificate.id, data, userName);
         toast({ title: "Certificate Updated", description: "Certificate has been updated." });
       } else {
-        await addCertificate(data);
+        await addCertificate(data, userName);
         toast({ title: "Certificate Added", description: "New certificate has been added." });
       }
       fetchCertificates();
@@ -141,7 +146,7 @@ export default function CertificatesPage() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [editingCertificate, toast, fetchCertificates]);
+  }, [editingCertificate, toast, fetchCertificates, user]);
   
   if (certificates === null) {
     return (

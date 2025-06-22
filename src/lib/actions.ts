@@ -58,17 +58,25 @@ export async function getCertificates() {
   });
 }
 
-export async function addCertificate(data: CertificateFormData) {
+export async function addCertificate(data: CertificateFormData, userName: string) {
   try {
     const namesArray = data.nama_pemegang.split(',').map(name => name.trim()).filter(name => name.length > 0);
-    await prisma.certificate.create({
+    const newCertificate = await prisma.certificate.create({
       data: {
         ...data,
         nama_pemegang: namesArray,
       },
     });
+    await prisma.activityLog.create({
+      data: {
+        user: userName,
+        action: 'CREATE_CERTIFICATE',
+        details: `Created certificate '${newCertificate.no_sertifikat}' for ${newCertificate.nama_pemegang.join(', ')}.`,
+      }
+    });
     revalidatePath('/certificates');
     revalidatePath('/dashboard');
+    revalidatePath('/logs');
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
       throw new Error(`A certificate with number '${data.no_sertifikat}' already exists.`);
@@ -78,7 +86,7 @@ export async function addCertificate(data: CertificateFormData) {
   }
 }
 
-export async function updateCertificate(id: string, data: CertificateFormData) {
+export async function updateCertificate(id: string, data: CertificateFormData, userName: string) {
   try {
     const existing = await prisma.certificate.findUnique({
       where: { no_sertifikat: data.no_sertifikat },
@@ -89,30 +97,52 @@ export async function updateCertificate(id: string, data: CertificateFormData) {
     }
 
     const namesArray = data.nama_pemegang.split(',').map(name => name.trim()).filter(name => name.length > 0);
-    await prisma.certificate.update({
+    const updatedCertificate = await prisma.certificate.update({
       where: { id },
       data: {
         ...data,
         nama_pemegang: namesArray,
       },
     });
+    await prisma.activityLog.create({
+      data: {
+        user: userName,
+        action: 'UPDATE_CERTIFICATE',
+        details: `Updated certificate '${updatedCertificate.no_sertifikat}'.`,
+      }
+    });
     revalidatePath('/certificates');
     revalidatePath('/dashboard');
+    revalidatePath('/logs');
   } catch (error) {
-    // If it's an error we threw intentionally, re-throw it.
     if (error instanceof Error) {
         throw error;
     }
-    // For any other type of error, log it and throw a generic message.
     console.error("Update Certificate Error:", error);
     throw new Error('An unexpected error occurred while updating the certificate.');
   }
 }
 
-export async function deleteCertificate(id: string) {
-  await prisma.certificate.delete({ where: { id } });
-  revalidatePath('/certificates');
-  revalidatePath('/dashboard');
+export async function deleteCertificate(id: string, userName: string) {
+  try {
+    const certificate = await prisma.certificate.findUnique({ where: { id } });
+    if (certificate) {
+      await prisma.certificate.delete({ where: { id } });
+      await prisma.activityLog.create({
+        data: {
+          user: userName,
+          action: 'DELETE_CERTIFICATE',
+          details: `Deleted certificate '${certificate.no_sertifikat}'.`,
+        }
+      });
+      revalidatePath('/certificates');
+      revalidatePath('/dashboard');
+      revalidatePath('/logs');
+    }
+  } catch(error) {
+    console.error("Delete Certificate Error:", error);
+    throw new Error('An unexpected error occurred while deleting the certificate.');
+  }
 }
 
 // --- USER ACTIONS ---
@@ -122,13 +152,13 @@ export async function getUsers() {
   });
 }
 
-export async function addUser(data: UserSubmitData) {
+export async function addUser(data: UserSubmitData, performedBy: string) {
   try {
     if (!data.password) {
       throw new Error('Password is required for new users.');
     }
     const hashedPassword = await bcrypt.hash(data.password, 10);
-    await prisma.user.create({
+    const newUser = await prisma.user.create({
       data: {
         name: data.name,
         email: data.email,
@@ -136,8 +166,16 @@ export async function addUser(data: UserSubmitData) {
         password: hashedPassword,
       },
     });
+    await prisma.activityLog.create({
+      data: {
+        user: performedBy,
+        action: 'CREATE_USER',
+        details: `Created new user '${newUser.name}' with role '${newUser.role}'.`,
+      }
+    });
     revalidatePath('/users');
     revalidatePath('/dashboard');
+    revalidatePath('/logs');
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
       throw new Error(`A user with email '${data.email}' already exists.`);
@@ -147,7 +185,7 @@ export async function addUser(data: UserSubmitData) {
   }
 }
 
-export async function updateUser(id: string, data: UserSubmitData) {
+export async function updateUser(id: string, data: UserSubmitData, performedBy: string) {
   try {
     const existingUser = await prisma.user.findUnique({
       where: { email: data.email },
@@ -166,27 +204,49 @@ export async function updateUser(id: string, data: UserSubmitData) {
       updateData.password = await bcrypt.hash(data.password, 10);
     }
     
-    await prisma.user.update({
+    const updatedUser = await prisma.user.update({
       where: { id },
       data: updateData,
     });
+    await prisma.activityLog.create({
+      data: {
+        user: performedBy,
+        action: 'UPDATE_USER',
+        details: `Updated user '${updatedUser.name}'.`,
+      }
+    });
     revalidatePath('/users');
+    revalidatePath('/logs');
   } catch (error) {
-    // If it's an error we threw intentionally, re-throw it.
     if (error instanceof Error) {
         throw error;
     }
-    // For any other type of error, log it and throw a generic message.
     console.error("Update User Error:", error);
     throw new Error('An unexpected error occurred while updating the user.');
   }
 }
 
 
-export async function deleteUser(id: string) {
-  await prisma.user.delete({ where: { id } });
-  revalidatePath('/users');
-  revalidatePath('/dashboard');
+export async function deleteUser(id: string, performedBy: string) {
+  try {
+    const user = await prisma.user.findUnique({ where: { id } });
+    if (user) {
+      await prisma.user.delete({ where: { id } });
+       await prisma.activityLog.create({
+        data: {
+          user: performedBy,
+          action: 'DELETE_USER',
+          details: `Deleted user '${user.name}'.`,
+        }
+      });
+      revalidatePath('/users');
+      revalidatePath('/dashboard');
+      revalidatePath('/logs');
+    }
+  } catch(error) {
+    console.error("Delete User Error:", error);
+    throw new Error('An unexpected error occurred while deleting the user.');
+  }
 }
 
 // --- LOG ACTIONS ---
@@ -203,20 +263,47 @@ export async function getTanahGarapanEntries() {
   });
 }
 
-export async function addTanahGarapanEntry(data: TanahGarapanFormData) {
-  await prisma.tanahGarapanEntry.create({ data });
+export async function addTanahGarapanEntry(data: TanahGarapanFormData, userName: string) {
+  const newEntry = await prisma.tanahGarapanEntry.create({ data });
+  await prisma.activityLog.create({
+    data: {
+      user: userName,
+      action: 'CREATE_TANAH_GARAPAN',
+      details: `Created new entry for '${newEntry.namaPemegangHak}' in '${newEntry.letakTanah}'.`,
+    }
+  });
   revalidatePath('/tanah-garapan');
+  revalidatePath('/logs');
 }
 
-export async function updateTanahGarapanEntry(id: string, data: TanahGarapanFormData) {
-  await prisma.tanahGarapanEntry.update({
+export async function updateTanahGarapanEntry(id: string, data: TanahGarapanFormData, userName: string) {
+  const updatedEntry = await prisma.tanahGarapanEntry.update({
     where: { id },
     data,
   });
+  await prisma.activityLog.create({
+    data: {
+      user: userName,
+      action: 'UPDATE_TANAH_GARAPAN',
+      details: `Updated entry for '${updatedEntry.namaPemegangHak}' in '${updatedEntry.letakTanah}'.`,
+    }
+  });
   revalidatePath('/tanah-garapan');
+  revalidatePath('/logs');
 }
 
-export async function deleteTanahGarapanEntry(id: string) {
-  await prisma.tanahGarapanEntry.delete({ where: { id } });
-  revalidatePath('/tanah-garapan');
+export async function deleteTanahGarapanEntry(id: string, userName: string) {
+  const entry = await prisma.tanahGarapanEntry.findUnique({ where: { id } });
+  if (entry) {
+    await prisma.tanahGarapanEntry.delete({ where: { id } });
+    await prisma.activityLog.create({
+      data: {
+        user: userName,
+        action: 'DELETE_TANAH_GARAPAN',
+        details: `Deleted entry for '${entry.namaPemegangHak}' in '${entry.letakTanah}'.`,
+      }
+    });
+    revalidatePath('/tanah-garapan');
+    revalidatePath('/logs');
+  }
 }
