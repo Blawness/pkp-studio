@@ -162,6 +162,9 @@ export async function deleteCertificate(id: string, userName: string) {
     }
   } catch(error) {
     console.error("Delete Certificate Error:", error);
+    if (error instanceof Error) {
+        throw error;
+    }
     throw new Error('An unexpected error occurred while deleting the certificate.');
   }
 }
@@ -332,6 +335,9 @@ export async function deleteUser(id: string, performedBy: string) {
     }
   } catch(error) {
     console.error("Delete User Error:", error);
+    if (error instanceof Error) {
+        throw error;
+    }
     throw new Error('An unexpected error occurred while deleting the user.');
   }
 }
@@ -380,19 +386,27 @@ export async function updateTanahGarapanEntry(id: string, data: TanahGarapanForm
 }
 
 export async function deleteTanahGarapanEntry(id: string, userName: string) {
-  const entry = await prisma.tanahGarapanEntry.findUnique({ where: { id } });
-  if (entry) {
-    await prisma.tanahGarapanEntry.delete({ where: { id } });
-    await prisma.activityLog.create({
-      data: {
-        user: userName,
-        action: 'DELETE_TANAH_GARAPAN',
-        details: `Deleted entry for '${entry.namaPemegangHak}' in '${entry.letakTanah}'.`,
-        payload: entry,
-      }
-    });
-    revalidatePath('/tanah-garapan');
-    revalidatePath('/logs');
+  try {
+    const entry = await prisma.tanahGarapanEntry.findUnique({ where: { id } });
+    if (entry) {
+      await prisma.tanahGarapanEntry.delete({ where: { id } });
+      await prisma.activityLog.create({
+        data: {
+          user: userName,
+          action: 'DELETE_TANAH_GARAPAN',
+          details: `Deleted entry for '${entry.namaPemegangHak}' in '${entry.letakTanah}'.`,
+          payload: entry,
+        }
+      });
+      revalidatePath('/tanah-garapan');
+      revalidatePath('/logs');
+    }
+  } catch (error) {
+    console.error("Delete Tanah Garapan Error:", error);
+    if (error instanceof Error) {
+        throw error;
+    }
+    throw new Error('An unexpected error occurred while deleting the Tanah Garapan entry.');
   }
 }
 
