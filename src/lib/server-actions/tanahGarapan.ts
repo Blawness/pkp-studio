@@ -11,6 +11,16 @@ export async function getTanahGarapanEntries() {
   });
 }
 
+export async function getTanahGarapanEntryById(id: string) {
+  const entry = await prisma.tanahGarapanEntry.findUnique({
+    where: { id },
+  });
+  if (!entry) {
+    throw new Error('Data tanah garapan tidak ditemukan');
+  }
+  return entry;
+}
+
 export async function addTanahGarapanEntry(data: TanahGarapanFormData, userName: string) {
   const newEntry = await prisma.tanahGarapanEntry.create({ data });
   await prisma.activityLog.create({

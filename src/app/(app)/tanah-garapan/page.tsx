@@ -4,7 +4,8 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import type { TanahGarapanEntry } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Edit3, Trash2 } from 'lucide-react';
+import { PlusCircle, Edit3, Trash2, Printer } from 'lucide-react';
+import Link from 'next/link';
 import {
   Dialog,
   DialogContent,
@@ -201,6 +202,11 @@ export default function TanahGarapanPage() {
                       </CardContent>
                       {canManage && (
                         <div className="flex justify-end gap-2 mt-3">
+                          <Button asChild variant="outline" size="sm">
+                            <Link href={`/garapan/${entry.id}/print`} target="_blank" rel="noopener noreferrer">
+                              <Printer className="mr-1 h-3 w-3" /> Preview
+                            </Link>
+                          </Button>
                           <Button variant="outline" size="sm" onClick={() => handleEditEntry(entry)}><Edit3 className="mr-1 h-3 w-3" /> Edit</Button>
                           <Button variant="destructive" size="sm" onClick={() => handleDeleteEntry(entry.id)}><Trash2 className="mr-1 h-3 w-3" /> Hapus</Button>
                         </div>
