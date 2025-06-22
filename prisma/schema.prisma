@@ -1,13 +1,12 @@
 
 datasource db {
-  provider     = "mysql"
-  url          = env("DATABASE_URL")
-  relationMode = "prisma"
+  provider = "mysql"
+  url      = env("DATABASE_URL")
 }
 
 generator client {
-  provider        = "prisma-client-js"
-  binaryTargets   = ["native", "debian-openssl-1.1.x"]
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-1.0.x"]
 }
 
 model Certificate {
@@ -16,7 +15,7 @@ model Certificate {
   nama_pemegang       Json
   surat_hak           String
   no_sertifikat       String   @unique
-  lokasi_tanah        String   @db.Text
+  lokasi_tanah        String
   luas_m2             Int
   tgl_terbit          DateTime
   surat_ukur          String
@@ -33,8 +32,7 @@ model User {
   password   String
   role       String       @default("user")
   createdAt  DateTime     @default(now())
-  attendance Attendance[]
-
+  Attendance Attendance[]
 }
 
 model ActivityLog {
@@ -47,28 +45,26 @@ model ActivityLog {
 }
 
 model TanahGarapanEntry {
-  id                            String   @id @default(cuid())
-  letakTanah                    String
-  namaPemegangHak               String
-  letterC                       String
-  nomorSuratKeteranganGarapan   String
-  luas                          Int
-  keterangan                    String?  @db.Text
-  createdAt                     DateTime @default(now())
-  updatedAt                     DateTime @updatedAt
+  id                          String   @id @default(cuid())
+  letakTanah                  String
+  namaPemegangHak             String
+  letterC                     String
+  nomorSuratKeteranganGarapan String
+  luas                        Int
+  keterangan                  String?
+  createdAt                   DateTime @default(now())
+  updatedAt                   DateTime @updatedAt
 }
 
 model Attendance {
   id        String    @id @default(cuid())
   date      DateTime  @db.Date
-  checkIn   DateTime  @map("check_in")
-  checkOut  DateTime? @map("check_out")
+  checkIn   DateTime
+  checkOut  DateTime?
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId String @map("user_id")
-
   @@unique([userId, date])
-  @@map("attendance")
 }
