@@ -154,7 +154,7 @@ export async function deleteCertificate(id: string, userName: string) {
           user: userName,
           action: 'DELETE_CERTIFICATE',
           details: `Deleted certificate '${certificate.no_sertifikat}'.`,
-          payload: certificate as any,
+          payload: certificate,
         }
       });
       revalidatePath('/certificates');
@@ -323,7 +323,7 @@ export async function deleteUser(id: string, performedBy: string) {
           user: performedBy,
           action: 'DELETE_USER',
           details: `Deleted user '${userToDelete.name}'.`,
-          payload: userToDelete as any,
+          payload: userToDelete,
         }
       });
       revalidatePath('/users');
@@ -392,7 +392,7 @@ export async function deleteTanahGarapanEntry(id: string, userName: string) {
           user: userName,
           action: 'DELETE_TANAH_GARAPAN',
           details: `Deleted entry for '${entry.namaPemegangHak}' in '${entry.letakTanah}'.`,
-          payload: entry as any,
+          payload: entry,
         }
       });
       revalidatePath('/tanah-garapan');
@@ -456,15 +456,13 @@ export async function exportTanahGarapanToCSV(): Promise<{ data?: string; error?
 
 // --- ATTENDANCE ACTIONS ---
 export async function getTodaysAttendanceForUser(userId: string) {
-  const todayStart = startOfDay(new Date());
-  const todayEnd = endOfDay(new Date());
+  const today = startOfDay(new Date());
 
-  return prisma.attendance.findFirst({
+  return prisma.attendance.findUnique({
     where: {
-      userId: userId,
-      date: {
-        gte: todayStart,
-        lte: todayEnd,
+      userId_date: {
+        userId,
+        date: today,
       },
     },
   });
@@ -481,8 +479,13 @@ export async function getUserAttendanceHistory(userId: string) {
 export async function checkIn(userId: string, userName: string) {
   const today = startOfDay(new Date());
   
-  const existing = await prisma.attendance.findFirst({
-    where: { userId, date: today }
+  const existing = await prisma.attendance.findUnique({
+    where: { 
+      userId_date: {
+        userId,
+        date: today,
+      }
+    }
   });
 
   if (existing) {
@@ -598,7 +601,7 @@ export async function deleteAttendance(id: string, performedBy: string) {
         user: performedBy,
         action: 'DELETE_ATTENDANCE',
         details: `Deleted attendance for ${attendanceToDelete.user.name} on ${attendanceToDelete.date.toLocaleDateString()}.`,
-        payload: attendanceToDelete as any,
+        payload: attendanceToDelete,
       }
     });
     revalidatePath('/attendance');
@@ -653,7 +656,7 @@ export async function restoreData(logId: string, userName: string): Promise<{ su
     return { success: false, message: 'Log entry not found or no data to restore.' };
   }
   
-  const payload = log.payload as any;
+  const payload = log.payload as Prisma.JsonValue;
 
   try {
     let restoredItemDetails = '';
@@ -661,7 +664,7 @@ export async function restoreData(logId: string, userName: string): Promise<{ su
 
     switch (log.action) {
       case 'DELETE_CERTIFICATE': {
-        const certData = payload as Certificate;
+        const certData = payload as any as Certificate;
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { id, createdAt, updatedAt, ...restorableCertData } = certData;
         const restoredCert = await prisma.certificate.create({
@@ -677,7 +680,7 @@ export async function restoreData(logId: string, userName: string): Promise<{ su
         break;
       }
       case 'DELETE_USER': {
-        const userData = payload as User;
+        const userData = payload as any as User;
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { id, createdAt, ...restorableUserData } = userData;
         const tempPassword = Math.random().toString(36).slice(-8);
@@ -693,7 +696,7 @@ export async function restoreData(logId: string, userName: string): Promise<{ su
         break;
       }
       case 'DELETE_TANAH_GARAPAN': {
-        const tgData = payload as TanahGarapanEntry;
+        const tgData = payload as any as TanahGarapanEntry;
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { id, createdAt, updatedAt, ...restorableTgData } = tgData;
         const restoredTg = await prisma.tanahGarapanEntry.create({
@@ -704,7 +707,7 @@ export async function restoreData(logId: string, userName: string): Promise<{ su
         break;
       }
        case 'DELETE_ATTENDANCE': {
-        const attendanceData = payload as Attendance;
+        const attendanceData = payload as any as Attendance;
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { id, createdAt, updatedAt, user, ...restorableData } = attendanceData;
         const restored = await prisma.attendance.create({
@@ -712,7 +715,8 @@ export async function restoreData(logId: string, userName: string): Promise<{ su
             ...restorableData,
             date: new Date(restorableData.date),
             checkIn: new Date(restorableData.checkIn),
-            checkOut: restorableData.checkOut ? new Date(restorableData.checkOut) : null
+            checkOut: restorableData.checkOut ? new Date(restorableData.checkOut) : null,
+            userId: restorableData.userId,
           },
         });
         restoredItemDetails = `Restored attendance for user ID '${restored.userId}' on ${restored.date.toLocaleDateString()}.`;
