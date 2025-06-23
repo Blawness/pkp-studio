@@ -1,12 +1,18 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider      = "prisma-client-js"
+  // The following line is not needed for the Prisma Data Proxy, but is required
+  // for the Accelerate and Edge runtimes.
+  // @see https://www.prisma.io/docs/orm/prisma-client/client-extensions/edge
+  previewFeatures = ["clientExtensions"]
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
+}
 
 datasource db {
   provider = "mysql"
   url      = env("DATABASE_URL")
-}
-
-generator client {
-  provider      = "prisma-client-js"
-  binaryTargets = ["native", "debian-openssl-3.0.x"]
 }
 
 model Certificate {
@@ -40,20 +46,20 @@ model ActivityLog {
   user      String
   action    String
   details   String
-  timestamp DateTime @default(now())
   payload   Json?
+  timestamp DateTime @default(now())
 }
 
 model TanahGarapanEntry {
-  id                           String   @id @default(cuid())
-  letakTanah                   String
-  namaPemegangHak              String
-  letterC                      String
-  nomorSuratKeteranganGarapan  String
-  luas                         Int
-  keterangan                   String?  @db.Text
-  createdAt                    DateTime @default(now())
-  updatedAt                    DateTime @updatedAt
+    id                         String    @id @default(cuid())
+    letakTanah                 String
+    namaPemegangHak            String
+    letterC                    String
+    nomorSuratKeteranganGarapan String
+    luas                       Int
+    keterangan                 String?   @db.Text
+    createdAt                  DateTime  @default(now())
+    updatedAt                  DateTime  @updatedAt
 }
 
 model Attendance {
