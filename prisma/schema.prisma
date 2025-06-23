@@ -2,16 +2,11 @@
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
-  provider      = "prisma-client-js"
-  // The following line is not needed for the Prisma Data Proxy, but is required
-  // for the Accelerate and Edge runtimes.
-  // @see https://www.prisma.io/docs/orm/prisma-client/client-extensions/edge
-  previewFeatures = ["clientExtensions"]
-  binaryTargets = ["native", "debian-openssl-3.0.x"]
+  provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "mysql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -21,7 +16,7 @@ model Certificate {
   nama_pemegang       Json
   surat_hak           String
   no_sertifikat       String   @unique
-  lokasi_tanah        String   @db.Text
+  lokasi_tanah        String
   luas_m2             Int
   tgl_terbit          DateTime
   surat_ukur          String
@@ -32,13 +27,13 @@ model Certificate {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String
-  password  String
-  role      String   @default("user")
-  createdAt DateTime @default(now())
+  id          String       @id @default(cuid())
+  name        String
+  email       String       @unique
+  password    String
+  role        String
   attendances Attendance[]
+  createdAt   DateTime     @default(now())
 }
 
 model ActivityLog {
@@ -46,25 +41,25 @@ model ActivityLog {
   user      String
   action    String
   details   String
-  payload   Json?
   timestamp DateTime @default(now())
+  payload   Json?
 }
 
 model TanahGarapanEntry {
-    id                         String    @id @default(cuid())
-    letakTanah                 String
-    namaPemegangHak            String
-    letterC                    String
-    nomorSuratKeteranganGarapan String
-    luas                       Int
-    keterangan                 String?   @db.Text
-    createdAt                  DateTime  @default(now())
-    updatedAt                  DateTime  @updatedAt
+  id                            String   @id @default(cuid())
+  letakTanah                    String
+  namaPemegangHak               String
+  letterC                       String
+  nomorSuratKeteranganGarapan   String
+  luas                          Int
+  keterangan                    String?
+  createdAt                     DateTime @default(now())
+  updatedAt                     DateTime @updatedAt
 }
 
 model Attendance {
   id        String    @id @default(cuid())
-  date      DateTime  @db.Date
+  date      DateTime
   checkIn   DateTime
   checkOut  DateTime?
   userId    String
