@@ -6,7 +6,7 @@ datasource db {
 
 generator client {
   provider      = "prisma-client-js"
-  binaryTargets = ["native", "rhel-openssl-1.0.x"]
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
 }
 
 model Certificate {
@@ -15,7 +15,7 @@ model Certificate {
   nama_pemegang       Json
   surat_hak           String
   no_sertifikat       String   @unique
-  lokasi_tanah        String
+  lokasi_tanah        String   @db.Text
   luas_m2             Int
   tgl_terbit          DateTime
   surat_ukur          String
@@ -26,13 +26,13 @@ model Certificate {
 }
 
 model User {
-  id         String       @id @default(cuid())
-  name       String
-  email      String       @unique
-  password   String
-  role       String       @default("user")
-  createdAt  DateTime     @default(now())
-  Attendance Attendance[]
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  password  String
+  role      String   @default("user")
+  createdAt DateTime @default(now())
+  attendances Attendance[]
 }
 
 model ActivityLog {
@@ -45,15 +45,15 @@ model ActivityLog {
 }
 
 model TanahGarapanEntry {
-  id                          String   @id @default(cuid())
-  letakTanah                  String
-  namaPemegangHak             String
-  letterC                     String
-  nomorSuratKeteranganGarapan String
-  luas                        Int
-  keterangan                  String?
-  createdAt                   DateTime @default(now())
-  updatedAt                   DateTime @updatedAt
+  id                           String   @id @default(cuid())
+  letakTanah                   String
+  namaPemegangHak              String
+  letterC                      String
+  nomorSuratKeteranganGarapan  String
+  luas                         Int
+  keterangan                   String?  @db.Text
+  createdAt                    DateTime @default(now())
+  updatedAt                    DateTime @updatedAt
 }
 
 model Attendance {
