@@ -2,7 +2,8 @@
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-1.1.x"]
 }
 
 datasource db {
@@ -32,8 +33,8 @@ model User {
   email       String       @unique
   password    String
   role        String
-  attendances Attendance[]
   createdAt   DateTime     @default(now())
+  attendances Attendance[]
 }
 
 model ActivityLog {
@@ -59,7 +60,7 @@ model TanahGarapanEntry {
 
 model Attendance {
   id        String    @id @default(cuid())
-  date      DateTime
+  date      DateTime  @db.Date
   checkIn   DateTime
   checkOut  DateTime?
   userId    String
