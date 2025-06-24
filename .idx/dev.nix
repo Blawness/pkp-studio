@@ -10,7 +10,7 @@
     pkgs.zulu
   ];
   # Sets environment variables in the workspace
-  env = {DATABASE_URL="mysql://u884479949_pkp:5AwGVpu4U0[e@srv1786.hstgr.io:3306/u884479949_pkp";};
+  env = {DATABASE_URL="mysql://u884479949_development:Xp9Lm38VtR2qBk7Nd5Wh@srv1786.hstgr.io:3306/u884479949_pkpdev";};
   # This adds a file watcher to startup the firebase emulators. The emulators will only start if
   # a firebase.json file is written into the user's directory
   services.firebase.emulators = {
